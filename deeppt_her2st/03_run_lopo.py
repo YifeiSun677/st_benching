@@ -1,28 +1,38 @@
 #!/usr/bin/env python
 """
-Step 3 — leave-one-patient-out: AE + predictor, refit inside every fold.
+Step 3 -- leave-one-patient-out: AE + predictor, refit inside every fold.
 
-LEAKAGE RULE (the single most important line in this file):
-    the feature scaler AND the autoencoder are fitted on TRAINING-PATIENT
-    SPOTS ONLY. Fitting either on all 13,620 spots leaks held-out tissue into
-    the representation, inflates every number, and is invisible downstream.
+Aligned to the released DeepPT code (12AE/1main_AE.py, 13DeepPT_train/*).
+Hyperparameters below are transplanted, not guessed:
+    n_hiddens 512, dropout 0.2, lr 1e-4 (both stages), Adam with NO weight
+    decay, batch 32, max_epochs 500, MLP patience 50, seed 42, MSE loss,
+    AE trained for a fixed 500 epochs with no early stopping.
 
-Fold structure, for held-out patient P:
-    test  = P
-    val   = the next patient alphabetically (wrapping) -- used for early stopping
-    train = the remaining 6
+TWO DELIBERATE DEVIATIONS, both to be stated in methods:
 
-Per-epoch predictions for the held-out patient are saved (as in your ST-Net
-run 2), so the scoring epoch can be changed without retraining.
+  1. LEAKAGE. The original fits the AE on a random 90/10 split of the POOLED
+     feature set, then compresses everything -- including slides later used
+     as test data. That is transductive. Here the AE is refit inside each
+     fold on TRAINING-PATIENT SPOTS ONLY, which is stricter and appropriate
+     for a benchmark whose subject is honest LOPO generalisation.
+
+  2. MODEL SELECTION. The original's fit() returns the LAST epoch (patience
+     50, no weight restoration). Here the best-validation-PCC epoch is also
+     recorded. Per-epoch predictions are saved either way, so both can be
+     scored without retraining.
+
+NOT a deviation, and important: features are fed to the AE RAW, unstandardised.
+The decoder ends in ReLU, so it can only reconstruct non-negative inputs;
+z-scoring would floor the reconstruction loss and degrade the code.
 
 Output per fold:
     preds/<P>/<P>_<epoch>.npz   counts [n_spots, 833], spot_id, section
-    preds/<P>/history.csv       train/val loss per epoch
-    ckpt/<P>_{scaler,ae,mlp}.pt
+    preds/<P>/history.csv       train/val loss and mean val PCC per epoch
+    ckpt/<P>_{ae,mlp}.pt
 
 Usage:
     python 03_run_lopo.py --features .../features_raw --targets .../targets \
-        --out /workspace/deeppt/results/deeppt_833 --tag raw
+        --out /workspace/deeppt/results/deeppt_833_raw --tag raw
 """
 from __future__ import annotations
 
@@ -41,8 +51,19 @@ from deeppt_models import AE, Predictor
 PATIENTS = list("ABCDEFGH")
 
 
+def mean_gene_pcc(pred: np.ndarray, true: np.ndarray) -> float:
+    """Mean per-gene Pearson r -- the original's `valid_coef`, the quantity
+    its early stopping maximises (utils.compute_coef_slope)."""
+    a = pred - pred.mean(0, keepdims=True)
+    b = true - true.mean(0, keepdims=True)
+    den = np.sqrt((a ** 2).sum(0) * (b ** 2).sum(0))
+    r = np.full(pred.shape[1], np.nan)
+    ok = den > 1e-12
+    r[ok] = (a * b).sum(0)[ok] / den[ok]
+    return float(np.nanmean(r))
+
+
 def load_split(feat_dir, targ_dir):
-    """All sections -> arrays keyed by patient."""
     secs = sorted(f[:-4] for f in os.listdir(feat_dir)
                   if f.endswith(".npy") and not f.endswith("_patches.npy"))
     X, Y, meta = {}, {}, {}
@@ -52,7 +73,8 @@ def load_split(feat_dir, targ_dir):
             xs.append(np.load(os.path.join(feat_dir, f"{s}.npy")))
             ys.append(np.load(os.path.join(targ_dir, f"{s}.npy")))
             sp = pd.read_csv(os.path.join(feat_dir, f"{s}_spots.csv"))
-            ms.append(pd.DataFrame({"spot_id": sp["spot_id"].astype(str), "section": s}))
+            ms.append(pd.DataFrame({"spot_id": sp["spot_id"].astype(str),
+                                    "section": s}))
         if not xs:
             continue
         X[p] = np.concatenate(xs).astype(np.float32)
@@ -63,11 +85,13 @@ def load_split(feat_dir, targ_dir):
 
 
 def train_ae(Xtr, Xva, args, device):
+    """1main_AE.py: fixed 500 epochs, Adam lr 1e-4, MSE, no early stopping."""
     ae = AE(Xtr.shape[1], args.d_code).to(device)
-    opt = torch.optim.Adam(ae.parameters(), lr=args.ae_lr, weight_decay=args.wd)
+    opt = torch.optim.Adam(ae.parameters(), lr=args.ae_lr)
     lossf = nn.MSELoss()
     tr = torch.from_numpy(Xtr).to(device)
     va = torch.from_numpy(Xva).to(device)
+
     best, best_sd, bad = np.inf, None, 0
     for ep in range(args.ae_epochs):
         ae.train()
@@ -75,20 +99,22 @@ def train_ae(Xtr, Xva, args, device):
         for i in range(0, len(tr), args.batch):
             b = tr[perm[i:i + args.batch]]
             opt.zero_grad()
-            rec, _ = ae(b)
-            loss = lossf(rec, b)
+            loss = lossf(ae(b)[0], b)
             loss.backward()
             opt.step()
         ae.eval()
         with torch.no_grad():
             vl = lossf(ae(va)[0], va).item()
-        if vl < best - 1e-6:
-            best, best_sd, bad = vl, {k: v.clone() for k, v in ae.state_dict().items()}, 0
+        if vl < best - 1e-7:
+            best, bad = vl, 0
+            best_sd = {k: v.clone() for k, v in ae.state_dict().items()}
         else:
             bad += 1
-            if bad >= args.patience:
+            if args.ae_patience and bad >= args.ae_patience:
                 break
-    ae.load_state_dict(best_sd)
+    # match the original: keep the FINAL weights unless --ae-restore-best
+    if args.ae_restore_best and best_sd is not None:
+        ae.load_state_dict(best_sd)
     return ae.eval(), best, ep + 1
 
 
@@ -101,12 +127,9 @@ def run_fold(P, X, Y, meta, args, device):
     Ytr = np.concatenate([Y[p] for p in train_p])
     Xva, Yva = X[val_p], Y[val_p]
     Xte, Yte = X[P], Y[P]
+    # NO standardisation -- the ReLU decoder requires non-negative inputs.
 
-    # ---- scaler: TRAIN ONLY -------------------------------------------
-    mu, sd = Xtr.mean(0, keepdims=True), Xtr.std(0, keepdims=True) + 1e-8
-    Xtr, Xva, Xte = [(a - mu) / sd for a in (Xtr, Xva, Xte)]
-
-    # ---- (iii) AE: TRAIN ONLY -----------------------------------------
+    # ---- (iii) AE, fitted on training patients only --------------------
     t0 = time.time()
     ae, ae_val, ae_eps = train_ae(Xtr, Xva, args, device)
     print(f"  AE: {ae_eps} epochs, val MSE {ae_val:.5f}, {time.time()-t0:.0f}s")
@@ -115,17 +138,17 @@ def run_fold(P, X, Y, meta, args, device):
         enc = lambda a: ae.encode(torch.from_numpy(a).to(device))
         Ztr, Zva, Zte = enc(Xtr), enc(Xva), enc(Xte)
 
-    # ---- (iv) predictor -----------------------------------------------
+    # ---- (iv) predictor: Linear -> Dropout -> Linear, mean-bias init ----
     mlp = Predictor(args.d_code, args.d_hidden, Ytr.shape[1], args.dropout,
                     bias_init=Ytr.mean(0)).to(device)
-    opt = torch.optim.Adam(mlp.parameters(), lr=args.mlp_lr, weight_decay=args.wd)
+    opt = torch.optim.Adam(mlp.parameters(), lr=args.mlp_lr)
     lossf = nn.MSELoss()
     ytr = torch.from_numpy(Ytr).to(device)
     yva = torch.from_numpy(Yva).to(device)
 
     pdir = os.path.join(args.out, "preds", P)
     os.makedirs(pdir, exist_ok=True)
-    hist, best, best_ep, bad = [], np.inf, 0, 0
+    hist, best_pcc, best_ep, bad = [], -1.0, 0, 0
 
     for ep in range(1, args.mlp_epochs + 1):
         mlp.train()
@@ -142,33 +165,40 @@ def run_fold(P, X, Y, meta, args, device):
 
         mlp.eval()
         with torch.no_grad():
-            vl = lossf(mlp(Zva), yva).item()
+            pv = mlp(Zva)
+            vl = lossf(pv, yva).item()
+            vpcc = mean_gene_pcc(pv.cpu().numpy(), Yva)
             pred = mlp(Zte).cpu().numpy()
 
-        # save EVERY epoch -- lets you rescore without retraining
         np.savez_compressed(
             os.path.join(pdir, f"{P}_{ep}.npz"),
             counts=pred.astype(np.float32),
             spot_id=meta[P]["spot_id"].values,
             section=meta[P]["section"].values,
         )
-        hist.append({"epoch": ep, "train_mse": tl, "val_mse": vl})
+        hist.append({"epoch": ep, "train_mse": tl, "val_mse": vl,
+                     "val_gene_pcc": vpcc})
 
-        if vl < best - 1e-6:
-            best, best_ep, bad = vl, ep, 0
-            torch.save(mlp.state_dict(), os.path.join(args.out, "ckpt", f"{P}_mlp.pt"))
+        # original criterion: maximise mean validation per-gene PCC
+        if vpcc > best_pcc:
+            best_pcc, best_ep, bad = vpcc, ep, 0
+            torch.save(mlp.state_dict(),
+                       os.path.join(args.out, "ckpt", f"{P}_mlp.pt"))
         else:
             bad += 1
             if bad >= args.patience:
-                print(f"  early stop at epoch {ep}")
+                print(f"  early stopping at epoch {ep}")
                 break
 
     pd.DataFrame(hist).to_csv(os.path.join(pdir, "history.csv"), index=False)
-    torch.save({"mu": mu, "sd": sd}, os.path.join(args.out, "ckpt", f"{P}_scaler.pt"))
     torch.save(ae.state_dict(), os.path.join(args.out, "ckpt", f"{P}_ae.pt"))
-    print(f"  best val MSE {best:.5f} @ epoch {best_ep}")
-    return {"patient": P, "val_patient": val_p, "best_epoch": best_ep,
-            "best_val_mse": best, "n_test_spots": len(Xte), "ae_epochs": ae_eps}
+    last_ep = hist[-1]["epoch"]
+    print(f"  best val PCC {best_pcc:+.4f} @ epoch {best_ep} "
+          f"(last epoch {last_ep})")
+    return {"patient": P, "val_patient": val_p,
+            "best_epoch": best_ep, "last_epoch": last_ep,
+            "best_val_gene_pcc": best_pcc, "ae_epochs": ae_eps,
+            "n_test_spots": len(Xte)}
 
 
 def main() -> None:
@@ -177,26 +207,34 @@ def main() -> None:
     ap.add_argument("--targets", required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--tag", default="raw")
+    # --- transplanted from the released code ---
     ap.add_argument("--d-code", type=int, default=512)
     ap.add_argument("--d-hidden", type=int, default=512)
     ap.add_argument("--dropout", type=float, default=0.2)
     ap.add_argument("--ae-lr", type=float, default=1e-4)
     ap.add_argument("--mlp-lr", type=float, default=1e-4)
-    ap.add_argument("--wd", type=float, default=1e-5)
-    ap.add_argument("--ae-epochs", type=int, default=300)
-    ap.add_argument("--mlp-epochs", type=int, default=200)
-    ap.add_argument("--patience", type=int, default=20)
-    ap.add_argument("--batch", type=int, default=256)
-    ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--ae-epochs", type=int, default=500)
+    ap.add_argument("--mlp-epochs", type=int, default=500)
+    ap.add_argument("--patience", type=int, default=50)
+    ap.add_argument("--batch", type=int, default=32)
+    ap.add_argument("--seed", type=int, default=42)
+    # --- knobs the original does not expose ---
+    ap.add_argument("--ae-patience", type=int, default=0,
+                    help="0 = off, matching the original's fixed 500 epochs")
+    ap.add_argument("--ae-restore-best", action="store_true",
+                    help="off by default: the original keeps final AE weights")
     ap.add_argument("--folds", nargs="*", default=PATIENTS)
     args = ap.parse_args()
 
-    torch.manual_seed(args.seed)
+    # utils.init_random_seed(42)
     np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    torch.cuda.manual_seed_all(args.seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
     os.makedirs(os.path.join(args.out, "ckpt"), exist_ok=True)
-
-    # log the full config, exactly as you did for ST-Net run 1
     with open(os.path.join(args.out, "config.json"), "w") as fh:
         json.dump(vars(args) | {"device": device}, fh, indent=2)
     print(json.dumps(vars(args), indent=2))
@@ -206,7 +244,8 @@ def main() -> None:
           f"{Y['A'].shape[1]} genes, patients {sorted(X)}")
 
     rows = [run_fold(P, X, Y, meta, args, device) for P in args.folds]
-    pd.DataFrame(rows).to_csv(os.path.join(args.out, "run_summary.csv"), index=False)
+    pd.DataFrame(rows).to_csv(os.path.join(args.out, "run_summary.csv"),
+                              index=False)
     print(f"\n[done] -> {args.out}")
 
 
