@@ -116,7 +116,8 @@ def run_fold(P, X, Y, meta, args, device):
         Ztr, Zva, Zte = enc(Xtr), enc(Xva), enc(Xte)
 
     # ---- (iv) predictor -----------------------------------------------
-    mlp = Predictor(args.d_code, args.d_hidden, Ytr.shape[1], args.dropout).to(device)
+    mlp = Predictor(args.d_code, args.d_hidden, Ytr.shape[1], args.dropout,
+                    bias_init=Ytr.mean(0)).to(device)
     opt = torch.optim.Adam(mlp.parameters(), lr=args.mlp_lr, weight_decay=args.wd)
     lossf = nn.MSELoss()
     ytr = torch.from_numpy(Ytr).to(device)
