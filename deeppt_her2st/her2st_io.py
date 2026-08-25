@@ -27,10 +27,30 @@ Image.MAX_IMAGE_PIXELS = None  # her2st JPEGs are ~10k x 10k
 R = 112  # half-window -> 224 px patch, same as HisToGene
 
 
+def _resolve(root: str, subdir: str, fname: str) -> str:
+    """Accept either <fname> or <fname>.gz -- her2st ships both forms."""
+    base = os.path.join(root, "data", subdir, fname)
+    for cand in (base, base + ".gz"):
+        if os.path.exists(cand):
+            return cand
+    raise FileNotFoundError(f"neither {base} nor {base}.gz exists")
+
+
+def _resolve(root: str, subdir: str, fname: str) -> str:
+    """Accept either <fname> or <fname>.gz -- her2st ships both forms."""
+    base = os.path.join(root, "data", subdir, fname)
+    for cand in (base, base + ".gz"):
+        if os.path.exists(cand):
+            return cand
+    raise FileNotFoundError(f"neither {base} nor {base}.gz exists")
+
+
 def list_sections(root: str) -> list[str]:
     """All section ids (A1..H3) present in ST-cnts, sorted."""
-    paths = glob.glob(os.path.join(root, "data", "ST-cnts", "*.tsv.gz"))
-    secs = [os.path.basename(p).split(".")[0] for p in paths]
+    paths = (glob.glob(os.path.join(root, "data", "ST-cnts", "*.tsv.gz"))
+             + glob.glob(os.path.join(root, "data", "ST-cnts", "*.tsv")))
+    secs = {os.path.basename(p).split(".")[0] for p in paths}
+    secs = list(secs)
     return sorted(secs)
 
 
@@ -54,16 +74,18 @@ def image_path(root: str, section: str) -> str:
 
 def load_counts(root: str, section: str) -> pd.DataFrame:
     """Raw count matrix, index = spot id, columns = gene symbols."""
-    p = os.path.join(root, "data", "ST-cnts", f"{section}.tsv.gz")
-    df = pd.read_csv(p, sep="\t", index_col=0, compression="gzip")
+    p = _resolve(root, "ST-cnts", f"{section}.tsv")
+    df = pd.read_csv(p, sep="\t", index_col=0,
+                     compression="gzip" if p.endswith(".gz") else None)
     df.index = df.index.astype(str)
     return df
 
 
 def load_spots(root: str, section: str) -> pd.DataFrame:
     """Selection file, indexed by the same '<x>x<y>' key as the count matrix."""
-    p = os.path.join(root, "data", "ST-spotfiles", f"{section}_selection.tsv.gz")
-    df = pd.read_csv(p, sep="\t", compression="gzip")
+    p = _resolve(root, "ST-spotfiles", f"{section}_selection.tsv")
+    df = pd.read_csv(p, sep="\t",
+                     compression="gzip" if p.endswith(".gz") else None)
     cols = {c.lower().strip(): c for c in df.columns}
     need = ["x", "y", "pixel_x", "pixel_y"]
     missing = [c for c in need if c not in cols]

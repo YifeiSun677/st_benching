@@ -47,6 +47,8 @@ def build_encoder(weights_path: str | None, device: str) -> nn.Module:
         sd = obj.state_dict() if hasattr(obj, "state_dict") else obj
         sd = sd.get("state_dict", sd)
         sd = {k.replace("module.", ""): v for k, v in sd.items()}
+        sd = {k[len("resnet."):] if k.startswith("resnet.") else k: v
+              for k, v in sd.items()}
         missing, unexpected = net.load_state_dict(sd, strict=False)
         print(f"[resnet50] loaded {weights_path}")
         print(f"           missing={len(missing)} unexpected={len(unexpected)}")

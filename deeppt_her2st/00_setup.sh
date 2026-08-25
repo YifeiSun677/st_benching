@@ -13,12 +13,8 @@ HER2ST="$WORK/her2st"                  # your her2st copy
 # --- 1. conda env --------------------------------------------------------
 # NOTE: do NOT pin torch==1.12.1 on a 4090 (sm_89 needs CUDA 11.8+/12.x).
 # NOTE: openslide is NOT installed — her2st ships JPEG, not .svs.
-conda create -y -n deeppt python=3.10
-eval "$(conda shell.bash hook)"
-conda activate deeppt
 
 pip install --upgrade pip
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 pip install numpy pandas scipy scikit-learn matplotlib pillow tqdm
 pip install torchstain          # only needed if you run --colornorm macenko
 

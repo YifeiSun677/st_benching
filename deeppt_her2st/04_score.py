@@ -61,7 +61,9 @@ def pick_epoch(pdir, patient, mode):
     if mode != "best":
         return int(mode)
     h = pd.read_csv(os.path.join(pdir, patient, "history.csv"))
-    return int(h.loc[h["val_mse"].idxmin(), "epoch"])
+    col = "val_gene_pcc" if "val_gene_pcc" in h.columns else "val_mse"
+    idx = h[col].idxmax() if col == "val_gene_pcc" else h[col].idxmin()
+    return int(h.loc[idx, "epoch"])
 
 
 def main() -> None:
