@@ -1,22 +1,21 @@
 """
-Train BLEEP on one within-patient fold.
+Train BLEEP on one fold. Handles both split types through one code path:
 
-Replaces BLEEP_main.py, whose main() reads SLURM_LOCALID / SLURM_NODEID and
-hard-crashes outside SLURM. Single-GPU, no DDP.
+  within-patient (as used for the patient-B control):
+    --patient B --test_section B1
+  leave-one-patient-out:
+    --train_sections A1,A2,... --test_sections B1,B2,...
+  (run_lopo.sh builds those lists for you)
 
-Two deliberate protocol choices, both to be stated in methods:
+Protocol, unchanged from the control run:
+  * checkpoint = LAST epoch of a fixed pre-declared budget
+  * the 80/20 split of training sections is MONITORING ONLY
+  * the held-out sections are never touched during training
 
-  1. Checkpoint = LAST epoch of a fixed pre-declared budget (default 4,
-     BLEEP's own argparse default). BLEEP saves the best-val-loss
-     checkpoint instead; we do not, because this benchmark scores every
-     model at the last epoch of its own declared budget.
-  2. The 80/20 split of the training sections is used for MONITORING ONLY.
-     Nothing is selected on it. The held-out section is never touched
-     during training.
-
-    python train_bleep.py --root /workspace/her2st/data \
-        --panel ../panels/panel_833.txt --patient B --test_section B1 \
-        --out /workspace/runs/bleep_patientB/B1
+Reports n_steps in run.json. Step count -- not epoch count -- is what to
+match when comparing a LOPO fold against the within-patient control: LOPO
+has ~7x more training spots, so equal epochs means ~7x more optimiser
+updates.
 """
 import argparse
 import json
@@ -28,8 +27,10 @@ import torch
 from torch.utils.data import DataLoader
 
 import config_her2st as CFG
-from her2st_dataset import Her2stCLIPDataset, load_panel, sections_for_patient
+import splits
+from her2st_dataset import load_panel
 from models import CLIPModel
+from patch_cache import build_dataset
 
 
 class AvgMeter:
@@ -63,14 +64,28 @@ def run_epoch(model, loader, device, optimizer=None):
     return meter.avg
 
 
+def resolve_split(args):
+    if args.train_sections and args.test_sections:
+        return (splits.parse_sections(args.train_sections),
+                splits.parse_sections(args.test_sections))
+    if args.patient and args.test_section:
+        return splits.loso_split(args.root, args.patient, args.test_section)
+    raise SystemExit("give --train_sections/--test_sections, or "
+                     "--patient/--test_section")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--root", required=True)
     ap.add_argument("--panel", required=True)
-    ap.add_argument("--patient", default="B")
-    ap.add_argument("--test_section", required=True)
     ap.add_argument("--out", required=True)
-    ap.add_argument("--epochs", type=int, default=4)
+    ap.add_argument("--cache", help="patch cache dir from build_patch_cache.py")
+    ap.add_argument("--patient")
+    ap.add_argument("--test_section")
+    ap.add_argument("--train_sections")
+    ap.add_argument("--test_sections")
+    ap.add_argument("--fold_name", default=None)
+    ap.add_argument("--epochs", type=int, default=20)
     ap.add_argument("--batch_size", type=int, default=256)
     ap.add_argument("--num_workers", type=int, default=8)
     ap.add_argument("--seed", type=int, default=42)
@@ -82,36 +97,31 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     panel = load_panel(args.panel)
-    all_sections = sections_for_patient(args.root, args.patient)
-    if args.test_section not in all_sections:
-        raise SystemExit(f"{args.test_section} not in {all_sections}")
-    train_sections = [s for s in all_sections if s != args.test_section]
-
-    print(f"fold: test={args.test_section}  train={train_sections}")
     if CFG.spot_embedding != len(panel):
-        raise SystemExit(
-            f"config_her2st.spot_embedding={CFG.spot_embedding} but panel has "
-            f"{len(panel)} genes. Edit config_her2st.py."
-        )
+        raise SystemExit(f"config spot_embedding={CFG.spot_embedding} != "
+                         f"panel {len(panel)}")
 
-    full = Her2stCLIPDataset(args.root, train_sections, panel, is_train=True)
+    train_sections, test_sections = resolve_split(args)
+    print(f"train {len(train_sections)} sections, "
+          f"test {len(test_sections)}: {test_sections}")
+
+    full = build_dataset(args, train_sections, panel, is_train=True)
     n_val = int(0.2 * len(full))
     train_ds, val_ds = torch.utils.data.random_split(
         full, [len(full) - n_val, n_val],
-        generator=torch.Generator().manual_seed(args.seed),
-    )
-    print(f"train spots {len(train_ds)}  /  monitor spots {len(val_ds)}")
-    if len(train_ds) < args.batch_size:
-        raise SystemExit("batch_size exceeds training set; contrastive "
-                         "learning needs the in-batch negatives -- get more "
-                         "sections rather than shrinking the batch")
+        generator=torch.Generator().manual_seed(args.seed))
+    steps_per_epoch = len(train_ds) // args.batch_size
+    print(f"train {len(train_ds)} / monitor {len(val_ds)} spots, "
+          f"{steps_per_epoch} steps/epoch, "
+          f"{steps_per_epoch * args.epochs} total steps")
+    if steps_per_epoch < 1:
+        raise SystemExit("batch_size exceeds the training set")
 
     train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True,
                               num_workers=args.num_workers, pin_memory=True,
                               drop_last=True)
     val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False,
-                            num_workers=args.num_workers, pin_memory=True,
-                            drop_last=False)
+                            num_workers=args.num_workers, pin_memory=True)
 
     model = CLIPModel().to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=CFG.lr,
@@ -125,27 +135,28 @@ def main():
         print(f"epoch {epoch}/{args.epochs}  train {tr:.4f}  monitor {va:.4f}")
 
     torch.save(model.state_dict(), os.path.join(args.out, "last.pt"))
-    meta = {
-        "patient": args.patient,
-        "test_section": args.test_section,
-        "train_sections": train_sections,
-        "n_train_spots": len(train_ds),
-        "n_monitor_spots": len(val_ds),
-        "n_genes": len(panel),
-        "epochs": args.epochs,
-        "batch_size": args.batch_size,
-        "lr": CFG.lr,
-        "weight_decay": CFG.weight_decay,
-        "temperature": CFG.temperature,
-        "encoder": CFG.model_name,
-        "checkpoint_rule": "last epoch of fixed budget",
-        "normalisation": "CPM natural log1p, no Harmony, no stain norm",
-        "history": history,
-        "wall_seconds": round(time.time() - t0, 1),
-    }
     with open(os.path.join(args.out, "run.json"), "w") as fh:
-        json.dump(meta, fh, indent=2)
-    print(f"saved -> {args.out}  ({meta['wall_seconds']}s)")
+        json.dump({
+            "fold_name": args.fold_name or (args.test_section or
+                                            ",".join(test_sections)),
+            "train_sections": train_sections,
+            "test_sections": test_sections,
+            "n_train_spots": len(train_ds),
+            "n_monitor_spots": len(val_ds),
+            "steps_per_epoch": steps_per_epoch,
+            "total_steps": steps_per_epoch * args.epochs,
+            "n_genes": len(panel),
+            "epochs": args.epochs,
+            "batch_size": args.batch_size,
+            "lr": CFG.lr, "weight_decay": CFG.weight_decay,
+            "temperature": CFG.temperature, "encoder": CFG.model_name,
+            "used_cache": bool(args.cache),
+            "checkpoint_rule": "last epoch of fixed budget",
+            "normalisation": "CPM natural log1p, no Harmony, no stain norm",
+            "history": history,
+            "wall_seconds": round(time.time() - t0, 1),
+        }, fh, indent=2)
+    print(f"saved -> {args.out}")
 
 
 if __name__ == "__main__":
