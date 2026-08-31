@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.DS_Store
+.ipynb_checkpoints/
+
+# large run artefacts stay on the volume / Mac, not in git
+*.npz
+*.ckpt
+*.pt
+*.npy
+!panels/*.npy
