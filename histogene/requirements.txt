@@ -1,0 +1,5 @@
+# HisToGene-specific deps, on top of whatever st_benching already needs.
+# torch/torchvision come with the RunPod PyTorch image - do NOT reinstall them.
+pytorch-lightning>=2.0,<3
+torchmetrics>=1.0
+einops>=0.6
