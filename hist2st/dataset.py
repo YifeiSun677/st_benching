@@ -37,7 +37,7 @@ class Her2stHist2ST(Dataset):
         s = self.sections[i]
         d = self.data[s]
         p = np.asarray(self.patches[d["row"]])                   # [N,112,112,3] uint8
-        patch = torch.from_numpy(p).permute(0, 3, 1, 2).float()  # [N,3,112,112]
+        patch = torch.from_numpy(p).permute(0, 3, 2, 1).float()   
         if self.scale255:
             patch = patch / 255.0
         return (patch,
