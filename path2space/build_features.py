@@ -32,22 +32,28 @@ def _read_counts(section):
                        compression="gzip" if str(p).endswith(".gz") else None)
 
 def _read_spotfile(section):
-    """读 spot 选择文件：需含 array 坐标 x,y 与像素坐标 pixel_x,pixel_y。"""
+    """读 spot 选择文件：需含 array 坐标与像素坐标。
+    her2st 的 _selection.tsv 常同时含 x/y 与 new_x/new_y，故不做 in-place rename
+    （会撞出重复列），而是显式挑列、重建干净 df。array 坐标优先用 x/y 拼 spot id。"""
     sp = ST_ROOT / "ST-spotfiles" / f"{section}_selection.tsv"
-    df = pd.read_csv(sp, sep="\t")
-    # 兼容不同表头命名
-    ren = {}
-    for a, b in [("new_x", "x"), ("new_y", "y"), ("pixel_x", "px"), ("pixel_y", "py"),
-                 ("X", "x"), ("Y", "y")]:
-        if a in df.columns:
-            ren[a] = b
-    df = df.rename(columns=ren)
-    if "px" not in df.columns and "pixel_x" in df.columns:
-        df = df.rename(columns={"pixel_x": "px", "pixel_y": "py"})
-    df["x"] = df["x"].round().astype(int)
-    df["y"] = df["y"].round().astype(int)
-    df["id"] = df["x"].astype(str) + "x" + df["y"].astype(str)
-    return df[["id", "x", "y", "px", "py"]]
+    df = pd.read_csv(sp, sep="	")
+    cols = {c.lower(): c for c in df.columns}
+    def pick(*names):
+        for n in names:
+            if n in cols:
+                return cols[n]
+        raise KeyError(f"{section} spotfile 缺列，候选 {names}，实际列 {list(df.columns)}")
+    cx, cy   = pick("x", "new_x"), pick("y", "new_y")
+    cpx, cpy = pick("pixel_x", "px"), pick("pixel_y", "py")
+    out = pd.DataFrame({
+        "x":  df[cx].round().astype(int),
+        "y":  df[cy].round().astype(int),
+        "px": df[cpx].round().astype(int),
+        "py": df[cpy].round().astype(int),
+    })
+    out["id"] = out["x"].astype(str) + "x" + out["y"].astype(str)
+    return out[["id", "x", "y", "px", "py"]]
+
 
 def _read_image(section):
     letter = section[0]
