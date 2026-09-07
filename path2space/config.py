@@ -23,7 +23,7 @@ DROPOUT       = 0.2      # 官方架构固定值（SAME）
 LR            = 1e-4
 WEIGHT_DECAY  = 0.0
 BATCH         = 256
-EPOCHS        = 300      # 固定预算、last-epoch 打分（与你 benchmark 规则一致）；先用 probe 定
+EPOCHS        = 200      # 固定预算、last-epoch 打分（与你 benchmark 规则一致）；先用 probe 定
 OPTIMIZER     = "adam"
 
 # ---- 集成（★ 22×7 在 8-patient LOPO 下无法照搬，见 WORKING_PROCESS.md）----
