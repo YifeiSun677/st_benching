@@ -1,0 +1,10 @@
+# Extras on top of the pod's existing torch + torchvision.
+# NOTE: do NOT add scprep here -- it pins pandas<2.1, which builds from source
+# and fails on Python 3.12 (the target transform is reimplemented in numpy).
+timm==0.9.16          # CMT blocks import timm.models.layers; 0.9.16 keeps the shim
+einops                # transformer_block.py
+scipy                 # graph_construction.py (imported by the model tree)
+memory_profiler       # model.py imports `profile` at module load (never used)
+Pillow                # image decode for the patch cache
+numpy
+pandas
