@@ -57,16 +57,28 @@ def main():
         check("patch == natural^T (upstream convention)",
               np.array_equal(up, rel), "max|diff|=%d" % int(np.abs(up.astype(int) - rel.astype(int)).max()))
 
-    # 5. model imports + forward on CPU (no CMT needed for the shape check)
+    # 5. model imports + forward. Upstream hardcodes .cuda() inside the
+    #    attention (transformer_block) and graph (censnet_block) modules, so the
+    #    model only runs with everything on the GPU. Forward on cuda when it is
+    #    available; otherwise check import + param count only (a CPU forward is
+    #    impossible without editing the read-only clone).
     import torch
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     from tcgn_import import load_tcgn
-    m = load_tcgn(num_classes=833, load_cmt=False, device="cpu")
-    with torch.no_grad():
-        y = m(torch.randn(2, 3, 224, 224))
-    check("TCGN forward -> [2,833]", tuple(y.shape) == (2, 833), str(tuple(y.shape)))
+    dev = "cuda" if torch.cuda.is_available() else "cpu"
+    m = load_tcgn(num_classes=833, load_cmt=False, device=dev)
     nparam = sum(p.numel() for p in m.parameters())
-    print("     TCGN params = %.3fM (paper ~86.24M)" % (nparam / 1e6))
+    check("TCGN imports + builds", nparam > 0,
+          "params = %.3fM (paper ~86.24M)" % (nparam / 1e6))
+    if dev == "cuda":
+        m.eval()
+        with torch.no_grad():
+            y = m(torch.randn(2, 3, 224, 224, device=dev))
+        check("TCGN forward -> [2,833]", tuple(y.shape) == (2, 833), str(tuple(y.shape)))
+    else:
+        print("     [note] no GPU visible; skipping the forward pass. Upstream "
+              "hardcodes .cuda() in its attention/graph blocks, so a CPU forward "
+              "is impossible without editing the clone. It runs on the pod's GPU.")
 
     print("\nAll preflight checks passed.")
 
