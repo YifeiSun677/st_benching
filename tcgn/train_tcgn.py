@@ -88,6 +88,7 @@ def train_fold(fold_name, test_sections, train_sections, tag,
 
     curve = []
     ep_times = []
+    nsteps = len(train_loader)
     for ep in range(1, epochs + 1):
         model.train()
         te = time.time(); tr_sum, nb = 0.0, 0
@@ -97,17 +98,21 @@ def train_fold(fold_name, test_sections, train_sections, tag,
             loss = lf(out, genes.to(device))
             loss.backward(); opt.step()
             tr_sum += loss.item(); nb += 1
+            if nb == 1 or nb % 25 == 0 or nb == nsteps:
+                print("  ep %d/%d  step %d/%d  loss=%.4f  (%.1fs elapsed)"
+                      % (ep, epochs, nb, nsteps, tr_sum / nb, time.time() - te), flush=True)
         ep_times.append(time.time() - te)
-        if ep == epochs or (save_every and ep % save_every == 0):
+        do_eval = (ep == epochs or (save_every and ep % save_every == 0))
+        val_mse = None
+        if do_eval:
             pred, val_mse = _predict(model, test_loader, device)
-            curve.append({"epoch": ep, "train_mse": tr_sum / max(nb, 1), "val_mse": val_mse})
-            print("  epoch %d/%d  train_mse=%.4f  val_mse=%.4f  (%.1fs/ep)"
-                  % (ep, epochs, tr_sum / max(nb, 1), val_mse, ep_times[-1]))
-            if save_every and ep % save_every == 0 and ep != epochs:
-                snap = os.path.join(out_dir, "snap_ep%d" % ep)
-                _save_preds(snap, test_ds, pred, panel)
-        else:
-            curve.append({"epoch": ep, "train_mse": tr_sum / max(nb, 1), "val_mse": None})
+        curve.append({"epoch": ep, "train_mse": tr_sum / max(nb, 1), "val_mse": val_mse})
+        print("  epoch %d/%d done  train_mse=%.4f  val_mse=%s  (%.1fs/ep)"
+              % (ep, epochs, tr_sum / max(nb, 1),
+                 ("%.4f" % val_mse) if val_mse is not None else "-", ep_times[-1]), flush=True)
+        if do_eval and save_every and ep % save_every == 0 and ep != epochs:
+            snap = os.path.join(out_dir, "snap_ep%d" % ep)
+            _save_preds(snap, test_ds, pred, panel)
 
     # final (last-epoch) predictions = the scored ones
     pred, val_mse = _predict(model, test_loader, device)
