@@ -23,7 +23,33 @@ def _to_device(batch, device):
     return {k: (v.to(device) if torch.is_tensor(v) else v) for k, v in batch.items()}
 
 
-def train_fold(patient, tag, epochs=None, lr=None, batch_size=None, device=None):
+def _heldout_pcc(model, test_ds, test_sections, device):
+    """Quick calibration metric: per-section per-gene Pearson r, averaged across
+    the held-out sections then over genes (nan-safe). Same spirit as score.py;
+    used only to pick a fixed epoch budget, NOT for final scoring."""
+    was_training = model.training
+    model.eval()
+    per_sec = []
+    with torch.no_grad():
+        for s in test_sections:
+            b = test_ds.section_batch(s, device=device)
+            pred = model(img=b["img"], mask=b["mask"], neighbor_emb=b["neighbor_emb"],
+                         position=b["position"], global_emb=b["global_emb"])["logits"]
+            pred = pred.cpu().numpy().astype(np.float64)
+            truth = np.asarray(b["label"], dtype=np.float64)
+            pv = pred - pred.mean(0); tv = truth - truth.mean(0)
+            denom = np.sqrt((pv**2).sum(0) * (tv**2).sum(0))
+            with np.errstate(invalid="ignore", divide="ignore"):
+                r = (pv * tv).sum(0) / denom          # (833,), nan where zero var
+            per_sec.append(r)
+    if was_training:
+        model.train()
+    with np.errstate(invalid="ignore"):
+        return float(np.nanmean(np.nanmean(np.stack(per_sec), 0)))
+
+
+def train_fold(patient, tag, epochs=None, lr=None, batch_size=None, device=None,
+               probe_every=0):
     epochs = epochs or config.EPOCHS
     lr = lr or config.LR
     batch_size = batch_size or config.BATCH_SIZE
@@ -45,6 +71,10 @@ def train_fold(patient, tag, epochs=None, lr=None, batch_size=None, device=None)
     loader = torch.utils.data.DataLoader(
         train_ds, batch_size=batch_size, shuffle=True,
         num_workers=config.NUM_WORKERS, pin_memory=False, drop_last=False)
+
+    # optional calibration probe: held-out PCC every `probe_every` epochs
+    probe_ds = TriTestSections(test_sections, panel) if probe_every else None
+    probe_curve = []
 
     model = build_model().to(device)
     if config.FREEZE_TARGET:
@@ -72,8 +102,13 @@ def train_fold(patient, tag, epochs=None, lr=None, batch_size=None, device=None)
         avg = running / len(train_ds)
         dt = time.time() - te
         per_epoch.append(avg)
-        if ep < 3 or (ep + 1) % 10 == 0 or ep == epochs - 1:
-            print(f"[fold {patient}] epoch {ep+1}/{epochs}  loss {avg:.4f}  {dt:.1f}s")
+        msg = f"[fold {patient}] epoch {ep+1}/{epochs}  loss {avg:.4f}  {dt:.1f}s"
+        if probe_every and ((ep + 1) % probe_every == 0 or ep == epochs - 1):
+            r = _heldout_pcc(model, probe_ds, test_sections, device)
+            probe_curve.append({"epoch": ep + 1, "heldout_pcc_mean": r})
+            msg += f"  | held-out pcc {r:.4f}"
+        if ep < 3 or (ep + 1) % 10 == 0 or ep == epochs - 1 or probe_curve:
+            print(msg)
 
     # ---- last-epoch inference on the held-out patient ----
     out_dir = os.path.join(config.OUTPUT_DIR, tag, f"fold_{patient}")
@@ -99,6 +134,14 @@ def train_fold(patient, tag, epochs=None, lr=None, batch_size=None, device=None)
                res_neighbor=list(config.RES_NEIGHBOR),
                train_sections=train_sections, test_sections=test_sections,
                train_loss_last=per_epoch[-1], seconds_total=time.time() - t0)
+    if probe_curve:
+        run["heldout_probe"] = probe_curve
+        with open(os.path.join(out_dir, "probe.json"), "w") as f:
+            json.dump(probe_curve, f, indent=2)
+        best = max(probe_curve, key=lambda x: x["heldout_pcc_mean"])
+        print(f"[fold {patient}] held-out probe: peak pcc {best['heldout_pcc_mean']:.4f} "
+              f"at epoch {best['epoch']}, last {probe_curve[-1]['heldout_pcc_mean']:.4f} "
+              f"at epoch {probe_curve[-1]['epoch']}")
     with open(os.path.join(out_dir, "run.json"), "w") as f:
         json.dump(run, f, indent=2)
     print(f"[fold {patient}] done in {run['seconds_total']/60:.1f} min -> {out_dir}")
@@ -112,5 +155,9 @@ if __name__ == "__main__":
     ap.add_argument("--epochs", type=int, default=None)
     ap.add_argument("--lr", type=float, default=None)
     ap.add_argument("--batch_size", type=int, default=None)
+    ap.add_argument("--probe_every", type=int, default=0,
+                    help="log held-out PCC every N epochs (calibration only; "
+                         "does not affect final last-epoch scoring)")
     a = ap.parse_args()
-    train_fold(a.patient, a.tag, epochs=a.epochs, lr=a.lr, batch_size=a.batch_size)
+    train_fold(a.patient, a.tag, epochs=a.epochs, lr=a.lr,
+               batch_size=a.batch_size, probe_every=a.probe_every)
