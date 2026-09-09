@@ -87,8 +87,7 @@ def data_test(device="cuda"):
     except Exception as e:
         print(f"[preflight] panel NOT ready: {e}")
     if os.path.exists(config.HER2ST_CACHE):
-        cache = np.memmap(config.HER2ST_CACHE, dtype=np.uint8, mode="r",
-                          shape=config.HER2ST_CACHE_SHAPE)
+        cache = np.load(config.HER2ST_CACHE, mmap_mode="r")
         print(f"[preflight] cache OK: {cache.shape} dtype={cache.dtype}")
     else:
         print(f"[preflight] cache NOT found at {config.HER2ST_CACHE}")

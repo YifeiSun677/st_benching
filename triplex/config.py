@@ -15,19 +15,15 @@ import os
 # Read-only clone of the upstream repo (we import ONLY the model from it).
 TRIPLEX_REPO   = os.environ.get("TRIPLEX_REPO", "/workspace/TRIPLEX")
 
-# Shared her2st 224x224 patch cache (the one built for BLEEP).
-#   HER2ST_CACHE : uint8 memmap, shape (N_TOTAL, 224, 224, 3)
-#   The per-section feature files carry a `cache_idx` column that indexes rows
-#   of this memmap, so target / global / neighbor features all come from the
-#   same patches as every other model in the benchmark.
-HER2ST_CACHE       = os.environ.get("HER2ST_CACHE", "/workspace/her2st_cache/patches.dat")
-HER2ST_CACHE_SHAPE = (int(os.environ.get("HER2ST_N", "13620")), 224, 224, 3)
+# Shared her2st 224x224 patch cache (the one built for BLEEP). This is a real
+# NumPy .npy file (header + data), so open it with np.load(mmap_mode="r"), NOT
+# np.memmap with a forced shape. Row order == BLEEP's index.json order.
+HER2ST_CACHE       = os.environ.get("HER2ST_CACHE", "/workspace/her2st_cache/patches.npy")
+HER2ST_CACHE_SHAPE = (int(os.environ.get("HER2ST_N", "13620")), 224, 224, 3)  # sanity only
 
-# Spot index: one row per spot, columns:
-#   idx, section, patient, spot_id, array_row, array_col, cache_idx
-# (idx == row in the global cache; cache_idx == same thing, kept explicit).
-# You almost certainly already have an equivalent from the BLEEP cache build;
-# her2st.build_spot_index() will (re)build it from raw her2st if you don't.
+# BLEEP's per-spot index. Its native form is index.json (list/dict, cache order);
+# our spot index CSV is derived from it by build_spot_index (see her2st.py).
+BLEEP_INDEX_JSON = os.environ.get("BLEEP_INDEX_JSON", "/workspace/her2st_cache/index.json")
 SPOT_INDEX = os.environ.get("SPOT_INDEX", "/workspace/her2st_cache/spot_index.csv")
 
 # Raw her2st (only needed if you have to (re)build the cache / index / counts).

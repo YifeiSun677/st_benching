@@ -34,8 +34,13 @@ _TEST_TF = T.Compose([T.ToTensor(), _NORM])
 
 
 def _open_cache():
-    return np.memmap(config.HER2ST_CACHE, dtype=np.uint8, mode="r",
-                     shape=config.HER2ST_CACHE_SHAPE)
+    # patches.npy is a real .npy (header + data); np.load with mmap_mode reads
+    # the header and returns a correctly-shaped read-only memmap.
+    arr = np.load(config.HER2ST_CACHE, mmap_mode="r")
+    if arr.shape[1:] != config.HER2ST_CACHE_SHAPE[1:]:
+        raise ValueError(f"cache patch shape {arr.shape[1:]} != "
+                         f"{config.HER2ST_CACHE_SHAPE[1:]}")
+    return arr
 
 
 def _load_section(section, panel):

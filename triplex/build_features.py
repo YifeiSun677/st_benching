@@ -81,8 +81,7 @@ def main():
     os.makedirs(config.FEATURE_DIR, exist_ok=True)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     index_df = her2st.load_spot_index()
-    cache = np.memmap(config.HER2ST_CACHE, dtype=np.uint8, mode="r",
-                      shape=config.HER2ST_CACHE_SHAPE)
+    cache = np.load(config.HER2ST_CACHE, mmap_mode="r")
     encoder = build_cigar_encoder(device=device)
     for section in tqdm(her2st.all_sections(index_df), desc="sections"):
         build_section(section, index_df, encoder, cache, device=device)
