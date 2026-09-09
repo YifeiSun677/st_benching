@@ -44,7 +44,9 @@ def _open_cache():
 
 
 def _load_section(section, panel):
-    """Read one section's feature file + build its expression matrix."""
+    """Read one section's feature file + attach its ground-truth expression
+    (from the shared expression.npy, indexed by cache_idx -- guaranteed
+    row-aligned to the patches/features, so no join)."""
     with h5py.File(os.path.join(config.FEATURE_DIR, f"{section}.h5"), "r") as f:
         d = dict(
             features=f["features"][:],            # (N,512) global
@@ -55,8 +57,10 @@ def _load_section(section, panel):
             array_rc=f["array_rc"][:],            # (N,2) (row,col)
             spot_id=f["spot_id"][:].astype(str),  # (N,)
         )
-    counts = her2st.load_counts(section, panel, d["spot_id"])
-    d["expr"] = her2st.normalize_expr(counts, d["array_rc"])   # (N,833)
+    expr = np.asarray(her2st.load_expression()[d["cache_idx"].astype(int)])  # (N,833)
+    if config.SMOOTH:
+        expr = her2st.smooth_expr(expr, d["array_rc"])
+    d["expr"] = expr.astype(np.float32)
     return d
 
 

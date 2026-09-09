@@ -20,6 +20,9 @@ TRIPLEX_REPO   = os.environ.get("TRIPLEX_REPO", "/workspace/TRIPLEX")
 # np.memmap with a forced shape. Row order == BLEEP's index.json order.
 HER2ST_CACHE       = os.environ.get("HER2ST_CACHE", "/workspace/her2st_cache/patches.npy")
 HER2ST_CACHE_SHAPE = (int(os.environ.get("HER2ST_N", "13620")), 224, 224, 3)  # sanity only
+# Row-aligned ground-truth expression (CPM + log1p, 833 genes) -- the benchmark's
+# shared truth; TRIPLEX trains and is scored against this, like the other models.
+HER2ST_EXPRESSION  = os.environ.get("HER2ST_EXPRESSION", "/workspace/her2st_cache/expression.npy")
 
 # BLEEP's per-spot index. Its native form is index.json (list/dict, cache order);
 # our spot index CSV is derived from it by build_spot_index (see her2st.py).
