@@ -42,9 +42,11 @@ def wiring_test(device="cuda"):
     ds = _FakeTrainDS(sizes, dim)
 
     # a batch drawing spots from BOTH synthetic sections
+    # a batch drawing spots from BOTH synthetic sections. pid/sid are 1-D [B],
+    # exactly what default_collate produces from the dataset's scalar fields.
     B = 8
-    pid = torch.LongTensor([0] * 4 + [1] * 4).view(B, 1).to(device)
-    sid = torch.LongTensor([0, 1, 2, 3, 0, 1, 2, 3]).view(B, 1).to(device)
+    pid = torch.LongTensor([0, 0, 0, 0, 1, 1, 1, 1]).to(device)   # section id/spot
+    sid = torch.LongTensor([0, 1, 2, 3, 0, 1, 2, 3]).to(device)   # row within section
     batch = dict(
         img=torch.randn(B, 3, 224, 224, device=device),
         mask=torch.randint(0, 2, (B, 25), device=device).long(),

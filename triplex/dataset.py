@@ -3,7 +3,8 @@ Datasets that reproduce upstream TriDataset's contract.
 
 TRAIN (per-spot):
   returns dict img (3,224,224), mask (25,), neighbor_emb (25,512),
-  label (833,), pid [1], sid [1]. The dataset also exposes int2id / global_embs
+  label (833,), pid (scalar), sid (scalar) -- collated to 1-D [B]. The dataset
+  also exposes int2id / global_embs
   / pos_dict, which the model's retrieve_global_emb() reads to encode the whole
   held-in section's global tokens each step -- so training MUST pass
   `dataset=<this>` in the forward call (train.py does).
@@ -87,8 +88,12 @@ class TriTrainDataset(torch.utils.data.Dataset):
             "mask": torch.LongTensor(d["mask"][idx]),
             "neighbor_emb": torch.FloatTensor(d["neighbor"][idx]),
             "label": torch.FloatTensor(d["expr"][idx]),
-            "pid": torch.LongTensor([i]),
-            "sid": torch.LongTensor([int(idx)]),
+            # scalars -> default_collate stacks them into 1-D [B], which is what
+            # the model needs: pid is used as a row-mask (pid == section_id) and
+            # sid.shape[0] must equal the batch size. Returning [1] here would
+            # collate to [B,1] and break encode_global's masked assignment.
+            "pid": torch.tensor(i, dtype=torch.long),          # section int id
+            "sid": torch.tensor(int(idx), dtype=torch.long),   # row within section
         }
 
 
