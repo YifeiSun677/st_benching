@@ -27,6 +27,15 @@ fi
 mkdir -p weights && ln -sfn "$(dirname "$(dirname "$CIGAR_CKPT")")" weights_link_tmp 2>/dev/null || true
 mkdir -p weights/cigar && ln -sfn "$CIGAR_CKPT" weights/cigar/tenpercent_resnet18.ckpt
 
+echo "== 3b. sanitize CIGAR ckpt once (tensors-only; avoids torch>=2.6 weights_only"
+echo "        + pytorch_lightning issue on every load; cached on the volume) =="
+if [ ! -f "${CIGAR_CKPT}.orig" ]; then
+  python -m triplex.sanitize_cigar_ckpt || {
+    echo "sanitize failed; falling back to: pip install pytorch_lightning"
+    pip install --no-input pytorch_lightning
+  }
+fi
+
 echo "== 4. PREFLIGHT (wiring test; needs GPU, not her2st) =="
 python -m triplex.preflight
 

@@ -44,6 +44,72 @@ def _inject_flash_attn_stub():
     sys.modules["flash_attn"] = stub
 
 
+def _ensure_pytorch_lightning():
+    """TRIPLEX.py does a top-level `import pytorch_lightning as pl`. The model
+    itself never uses pl (it's a plain nn.Module) -- BUT the CIGAR checkpoint is
+    a Lightning checkpoint whose pickle references
+    pytorch_lightning.callbacks.model_checkpoint.ModelCheckpoint. So:
+
+      * If the real package is installed, use it (do NOT shadow it) -- it's what
+        lets torch.load reconstruct that checkpoint. This is the simplest setup.
+      * Only if pl is genuinely absent do we inject a stub deep enough to (a)
+        satisfy the dead top-level import AND (b) let torch.load deserialize the
+        checkpoint's ModelCheckpoint global as a throwaway dummy. That path lets
+        you run with a *sanitized* (tensors-only) CIGAR ckpt and no pl at all.
+    """
+    try:
+        import pytorch_lightning  # noqa: F401  (real package present -> use it)
+        return
+    except Exception:
+        pass
+
+    pl = types.ModuleType("pytorch_lightning")
+    pl.LightningModule = object
+    pl.LightningDataModule = object
+    callbacks = types.ModuleType("pytorch_lightning.callbacks")
+    mc = types.ModuleType("pytorch_lightning.callbacks.model_checkpoint")
+
+    class _DummyCallback:
+        """Reconstructable placeholder: pickle does __new__ + set __dict__."""
+        def __init__(self, *a, **k):
+            pass
+        def __setstate__(self, state):
+            try:
+                self.__dict__.update(state)
+            except Exception:
+                pass
+
+    mc.ModelCheckpoint = _DummyCallback
+    callbacks.ModelCheckpoint = _DummyCallback
+    callbacks.model_checkpoint = mc
+    pl.callbacks = callbacks
+    sys.modules["pytorch_lightning"] = pl
+    sys.modules["pytorch_lightning.callbacks"] = callbacks
+    sys.modules["pytorch_lightning.callbacks.model_checkpoint"] = mc
+
+
+def _patch_torch_load_weights_only():
+    """Upstream TRIPLEX.py line ~45 calls torch.load(ckpt_path) with no
+    weights_only, and it's in the read-only clone so we can't edit it. Under
+    torch >= 2.6 the default flipped to weights_only=True, which refuses the
+    checkpoint's ModelCheckpoint global. The CIGAR ckpt is a trusted release
+    (ozanciga tenpercent), so default weights_only=False when the caller didn't
+    specify it. Covers both upstream's target-encoder load and our cigar.py.
+    Idempotent; a no-op on torch < 2.6 where the kwarg/behaviour differ."""
+    import torch
+    if getattr(torch.load, "_triplex_patched", False):
+        return
+    _orig = torch.load
+
+    def _load(*args, **kwargs):
+        kwargs.setdefault("weights_only", False)
+        return _orig(*args, **kwargs)
+
+    _load._triplex_patched = True
+    _load._orig = _orig
+    torch.load = _load
+
+
 def _register_lean_packages(src_dir):
     """Make `model.TRIPLEX.*` importable without running model/__init__.py."""
     for pkg_name, pkg_path in [
@@ -78,6 +144,8 @@ def load_triplex_class(repo=None):
             "Clone it read-only first; see the runbook.")
 
     _inject_flash_attn_stub()
+    _ensure_pytorch_lightning()
+    _patch_torch_load_weights_only()
     if src_dir not in sys.path:
         sys.path.insert(0, src_dir)
     _register_lean_packages(src_dir)

@@ -19,8 +19,15 @@ from . import config
 
 
 def _load_state(ckpt_path):
-    state = torch.load(ckpt_path, map_location="cpu")
-    sd = state["state_dict"] if "state_dict" in state else state
+    # The CIGAR file is a Lightning checkpoint: its pickle references
+    # pytorch_lightning.callbacks.model_checkpoint.ModelCheckpoint, and torch>=2.6
+    # defaults to weights_only=True which refuses it. Ensure that global is
+    # resolvable (real pl if installed, else a throwaway stub) and load full.
+    from .triplex_import import _ensure_pytorch_lightning, _patch_torch_load_weights_only
+    _ensure_pytorch_lightning()
+    _patch_torch_load_weights_only()
+    state = torch.load(ckpt_path, map_location="cpu")   # weights_only=False via patch
+    sd = state["state_dict"] if isinstance(state, dict) and "state_dict" in state else state
     for k in list(sd.keys()):
         sd[k.replace("model.", "").replace("resnet.", "")] = sd.pop(k)
     return sd
