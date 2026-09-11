@@ -34,9 +34,16 @@ SPOT_PITCH_UM = 200.0             # ST v1 array: 100 um spots, 200 um centre-to-
 HEST_PATCH_UM = 112.0             # HEST-bench patch = 224 px at 0.5 um/px (UNI's 20x scale)
 UNI_INPUT_PX = 224
 
-# ---- UNI (uni_v1_official) exactly as hest_utils/pretrained_configs/uni_v1_official.json
-UNI_TIMM_KWARGS = dict(model_name="vit_large_patch16_224", dynamic_img_size=True,
-                       num_classes=0, init_values=1.0)
+# ---- UNI: exactly the MahmoodLab/UNI model card ("download to a local checkpoint" route):
+#   timm.create_model("vit_large_patch16_224", img_size=224, patch_size=16,
+#                     init_values=1e-5, num_classes=0, dynamic_img_size=True)
+#   model.load_state_dict(torch.load(ckpt, map_location="cpu"), strict=True); model.eval()
+#   transform = Resize(224) -> ToTensor -> Normalize(ImageNet mean/std)
+# (STFlow/HEST's uni_v1_official.json passes init_values=1.0 instead; init_values only
+#  initialises the LayerScale gammas, which the strict load overwrites, so both give
+#  bit-identical outputs - verified: max |diff| = 0.0.)
+UNI_TIMM_KWARGS = dict(model_name="vit_large_patch16_224", img_size=224, patch_size=16,
+                       init_values=1e-5, num_classes=0, dynamic_img_size=True)
 UNI_FEATURE_DIM = 1024
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
