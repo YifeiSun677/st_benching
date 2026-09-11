@@ -10,6 +10,18 @@ results/stflow_833/; the preds/*.npz stay out of git and are rsynced to the Mac)
   per_gene_pcc_by_fold.csv   genes x patients
   headline.json              mean over folds + range, markers, gene-set means
 
+--renorm panel_cp10k   (depth-normalised footing, used for the cross-model table)
+  STFlow's own target is log1p(RAW counts), so its raw-scale PCC is dominated by
+  sequencing depth (a depth-only oracle scores ~0.54 on patient B). This option removes
+  depth from BOTH sides before scoring, exactly as HisToGene/Hist2ST build their targets
+  (scprep library_size_normalize(m[gene_set]) = per-spot panel total -> x 1e4, then log):
+      truth: raw = expm1(truth)  (integers, recovered exactly)
+      pred : raw_hat = clip(expm1(pred), 0)
+      both : log1p(1e4 * x / rowsum(x))
+  Natural log vs log10 is irrelevant for PCC (a constant factor). Written to _scored_panel_cp10k/.
+  The depth-only oracle (true spot depth x training patients' mean gene profile, no image)
+  is reported in raw mode; under panel_cp10k it is constant per gene by construction.
+
 Pipeline check built in: the zero-information control (each fold's TRAINING patients'
 per-gene mean) must have sse_ratio >= 1 and frac_genes_beat_baseline == 0 on every
 patient, because the section's own mean is the L2-optimal constant.
@@ -28,9 +40,16 @@ import config as C
 from metrics import patient_metrics
 
 
+def renorm(x):
+    """Per-spot panel-total normalisation to 10,000, then natural log1p."""
+    tot = x.sum(1, keepdims=True)
+    return np.log1p(1e4 * x / np.where(tot > 0, tot, 1.0))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--tag", required=True)
+    ap.add_argument("--renorm", choices=["none", "panel_cp10k"], default="none")
     ap.add_argument("--gene_sets_dir", default=None,
                     help="dir with gene_set_<name>.txt files (all/hvg/svg/marker)")
     a = ap.parse_args()
@@ -38,7 +57,7 @@ def main():
     folds = sorted(glob.glob(os.path.join(root, "fold*_*")))
     if not folds:
         sys.exit(f"no fold directories under {root}")
-    out = os.path.join(root, "_scored")
+    out = os.path.join(root, "_scored" if a.renorm == "none" else f"_scored_{a.renorm}")
     os.makedirs(out, exist_ok=True)
 
     rows, pcc_cols, genes = [], {}, None
@@ -55,8 +74,18 @@ def main():
         preds = [z["pred"].astype(np.float64) for z in zs]
         truths = [z["truth"].astype(np.float64) for z in zs]
         ctrl = [np.broadcast_to(z["train_mean"], z["truth"].shape).astype(np.float64) for z in zs]
+        # depth-only oracle: true spot depth x training mean profile, no image
+        prof = np.clip(np.expm1(zs[0]["train_mean"].astype(np.float64)), 0, None)
+        prof = prof / prof.sum()
+        oracle = [np.log1p(np.expm1(t).sum(1, keepdims=True) * prof[None, :]) for t in truths]
+        if a.renorm == "panel_cp10k":
+            preds = [renorm(np.clip(np.expm1(p), 0, None)) for p in preds]
+            truths = [renorm(np.rint(np.expm1(t))) for t in truths]
+            ctrl = [renorm(np.clip(np.expm1(c), 0, None)) for c in ctrl]
         m, r, _ = patient_metrics(preds, truths, genes, C.MARKERS)
         mc, _, _ = patient_metrics(ctrl, truths, genes)
+        mo = patient_metrics(oracle, [z["truth"].astype(np.float64) for z in zs], genes)[0] \
+            if a.renorm == "none" else {"pcc_mean": float("nan")}
         if mc["sse_ratio_median"] < 1 - 1e-9 or mc["frac_genes_beat_baseline"] > 0:
             print(f"  !! pipeline check failed on {pat}: control beats section mean")
         run = json.load(open(os.path.join(fd, "run.json")))
@@ -64,12 +93,14 @@ def main():
                          epoch=int(zs[0]["epoch"]), **m,
                          ctrl_sse_ratio_median=mc["sse_ratio_median"],
                          ctrl_frac_beat=mc["frac_genes_beat_baseline"],
+                         depth_oracle_pcc_raw=mo["pcc_mean"], renorm=a.renorm,
                          sec_train=run.get("sec_train"), peak_gpu_gb=run.get("peak_gpu_gb")))
         pcc_cols[pat] = r
         print(f"  {pat}: pcc_mean {m['pcc_mean']:+.4f}  median {m['pcc_median']:+.4f}  "
               f"frac_pos {m['frac_pos']:.3f}  sse {m['sse_ratio_median']:.3f} "
               f"(ctrl {mc['sse_ratio_median']:.3f})  beat {m['frac_genes_beat_baseline']:.3f}  "
-              f"sd {m['sd_ratio_median']:.3f}  ERBB2 {m.get('pcc_ERBB2', np.nan):+.3f}")
+              f"sd {m['sd_ratio_median']:.3f}  ERBB2 {m.get('pcc_ERBB2', np.nan):+.3f}"
+              + (f"  | depth-oracle {mo['pcc_mean']:+.4f}" if a.renorm == "none" else ""))
 
     df = pd.DataFrame(rows)
     df.to_csv(os.path.join(out, "per_fold_summary.csv"), index=False)
@@ -78,7 +109,7 @@ def main():
     pg.to_csv(os.path.join(out, "per_gene_pcc_by_fold.csv"))
 
     num = [c for c in df.columns if df[c].dtype.kind in "fi" and c not in ("epoch",)]
-    head = dict(tag=a.tag, n_folds=len(df),
+    head = dict(tag=a.tag, renorm=a.renorm, n_folds=len(df),
                 mean_over_folds={c: float(df[c].mean()) for c in num},
                 range_over_folds={c: [float(df[c].min()), float(df[c].max())] for c in
                                   ["pcc_mean", "pcc_median", "sse_ratio_median",
@@ -94,7 +125,7 @@ def main():
             sets[name] = dict(n=len(idx), mean_over_folds=float(np.nanmean(per_fold)))
         head["gene_sets"] = sets
     json.dump(head, open(os.path.join(out, "headline.json"), "w"), indent=2)
-    print(f"\nHEADLINE ({len(df)} folds): pcc_mean {df.pcc_mean.mean():+.4f} "
+    print(f"\nHEADLINE [{a.renorm}] ({len(df)} folds): pcc_mean {df.pcc_mean.mean():+.4f} "
           f"[{df.pcc_mean.min():+.4f}, {df.pcc_mean.max():+.4f}]  "
           f"pcc_median {df.pcc_median.mean():+.4f}  sse {df.sse_ratio_median.mean():.3f}  "
           f"beat {df.frac_genes_beat_baseline.mean():.3f}\n-> {out}")
