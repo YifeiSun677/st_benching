@@ -1,15 +1,13 @@
-# STFlow port -- extra packages on top of the RunPod PyTorch image.
+# STFlow port -- extra packages on top of the RunPod PyTorch image (kept minimal:
+# ~20 MB of downloads in total, so a slow pod network is survivable).
 # torch / torchvision come from the image: do NOT reinstall them here.
 timm>=0.9.8          # SwiGLUPacked + vit_large_patch16_224 for UNI
 einops
 torch_geometric      # only torch_geometric.utils.to_dense_batch (pure python, no extensions)
-scanpy               # imported (not used) by upstream stflow/data/dataset.py
-h5py
 huggingface_hub
 pandas
 scipy
 Pillow
-matplotlib
-# Deliberately NOT installed: scprep (pins pandas<2.1 -> source build fails on py3.12),
-# scvi-tools (ZINB prior re-implemented), wandb, mygene. The port never imports the
-# upstream modules that need them.
+# Deliberately NOT installed: scanpy / matplotlib / scikit-learn / h5py (only needed by
+# upstream modules the port does not import), scprep (pins pandas<2.1 -> fails on
+# py3.12), scvi-tools (ZINB prior re-implemented), wandb, mygene.

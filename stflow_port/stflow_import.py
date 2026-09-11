@@ -7,7 +7,9 @@ Why a shim instead of `pip install -e .`:
     the two never collide (same lesson as path2space/p2s_companion);
   * upstream `stflow/data/normalize_utils.py` imports `scprep` at module top (pins
     pandas<2.1, fails on py3.12) and `stflow/utils` imports `mygene`; the ZINB prior
-    imports `scvi-tools`. We import none of those modules, so none are installed.
+    imports `scvi-tools`; `stflow/data/dataset.py` imports scanpy/matplotlib/sklearn/h5py
+    through hest_utils. We import none of those modules (SPData and padding_batcher are
+    vendored verbatim in upstream_vendored.py), so none of those packages are installed.
 
 Fixes applied (all verified by preflight.py):
   FIX 1  TransformerBlock passes `non_negative=` to GeneUpdate, whose __init__ does not
@@ -158,7 +160,7 @@ def load():
         from stflow.model.denoiser import Denoiser
         from stflow.flow.interpolant import Interpolant
         from stflow.data.sampling_utils import PatchSampler
-        from stflow.data.dataset import SPData, padding_batcher
+        from upstream_vendored import SPData, padding_batcher   # verbatim copy, see file
         from stflow.app.flow.test import test as upstream_test, metric_func
     _LOADED.update(repo=repo, FA=FA, T=T, Denoiser=Denoiser, Interpolant=Interpolant,
                    PatchSampler=PatchSampler, SPData=SPData, padding_batcher=padding_batcher,

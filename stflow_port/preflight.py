@@ -60,7 +60,7 @@ def stage_env():
         report("PASS", "gpu", f"{p.name}  {p.total_memory/2**30:.1f} GB")
     else:
         report("FAIL", "gpu", "CUDA not available")
-    for mod in ["timm", "einops", "torch_geometric", "scanpy", "h5py", "scipy", "pandas",
+    for mod in ["timm", "einops", "torch_geometric", "scipy", "pandas",
                 "PIL", "huggingface_hub"]:
         try:
             m = importlib.import_module(mod)
@@ -71,7 +71,7 @@ def stage_env():
     from timm.models import vision_transformer as vt
     report("PASS" if hasattr(vt, "SwiGLUPacked") else "FAIL", "timm has SwiGLUPacked",
            f"timm {timm.__version__} (need >=0.9)")
-    for bad in ["scprep", "scvi"]:
+    for bad in ["scprep", "scvi"]:   # scanpy etc. may be present from other models: harmless
         try:
             importlib.import_module(bad)
             report("WARN", f"{bad} installed", "not needed; scprep pins pandas<2.1 - uninstall if it breaks pandas")
@@ -94,6 +94,17 @@ def stage_model():
     commit = git_commit(C.STFLOW_REPO)
     report("PASS" if commit == C.STFLOW_PINNED_COMMIT else "WARN", "STFlow clone commit",
            f"{commit[:10]} (pinned {C.STFLOW_PINNED_COMMIT[:10]})")
+
+    # vendored SPData / padding_batcher identical to the clone's source text
+    import ast
+    import inspect
+    import upstream_vendored as V
+    up_src = open(os.path.join(C.STFLOW_REPO, V.UPSTREAM_FILE)).read()
+    up = {n.name: ast.get_source_segment(up_src, n) for n in ast.parse(up_src).body
+          if isinstance(n, (ast.ClassDef, ast.FunctionDef))}
+    same = all(up.get(k) == inspect.getsource(getattr(V, k)).rstrip("\n") for k in V.VENDORED_NAMES)
+    report("PASS" if same else "FAIL", "vendored SPData/padding_batcher == upstream source",
+           f"{', '.join(V.VENDORED_NAMES)} vs {V.UPSTREAM_FILE}")
 
     # FIX 3: identical ops
     fa = U["FA"].FrameAveraging(dim=2)
