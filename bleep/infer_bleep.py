@@ -19,6 +19,8 @@ import splits
 from her2st_dataset import load_panel
 from models import CLIPModel
 from patch_cache import build_dataset
+import json
+from gray import GRAY_MODES, gray_provenance
 
 
 @torch.no_grad()
@@ -62,6 +64,7 @@ def main():
                     choices=["average", "weighted_average", "simple"])
     ap.add_argument("--batch_size", type=int, default=128)
     ap.add_argument("--num_workers", type=int, default=8)
+    ap.add_argument("--gray", choices=GRAY_MODES, default="none")
     args = ap.parse_args()
 
     os.makedirs(args.out, exist_ok=True)
@@ -114,6 +117,16 @@ def main():
         ref_keys=np.array(ref_ds.spot_keys()),
         method=np.array(args.method), top_k=np.array(k))
     print(f"saved {pred.shape} -> {args.out}/preds.npz")
+    rj = os.path.join(args.out, "run.json")
+    meta = {}
+    if os.path.exists(rj):
+        with open(rj) as fh:
+            meta = json.load(fh)
+    meta.update(gray_provenance(args.gray))
+    meta.update({"top_k": int(k), "method": args.method,
+                 "test_section": args.test_section, "ckpt": args.ckpt})
+    with open(rj, "w") as fh:
+        json.dump(meta, fh, indent=2)
 
 
 if __name__ == "__main__":

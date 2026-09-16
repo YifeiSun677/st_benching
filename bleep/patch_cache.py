@@ -13,6 +13,7 @@ import numpy as np
 import torch
 import torchvision.transforms.functional as TF
 from PIL import Image
+from gray import gray_any
 
 
 class CachedCLIPDataset(torch.utils.data.Dataset):
@@ -68,6 +69,8 @@ class CachedCLIPDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, i):
         arr = np.asarray(self._patches[self.rows[i]])
+        arr = gray_any(arr, getattr(self, "gray", "none"),
+                       is_query=getattr(self, "is_query", False))
         return {
             "image": self.transform(arr).float(),
             "reduced_expression": torch.from_numpy(self.expression[i]).float(),
@@ -80,6 +83,23 @@ class CachedCLIPDataset(torch.utils.data.Dataset):
 def build_dataset(args, sections, panel, is_train, verbose=True):
     """Pick cache or on-the-fly loader based on --cache."""
     if getattr(args, "cache", None):
-        return CachedCLIPDataset(args.cache, sections, panel, is_train, verbose)
-    from her2st_dataset import Her2stCLIPDataset
-    return Her2stCLIPDataset(args.root, sections, panel, is_train, verbose)
+        ds = CachedCLIPDataset(args.cache, sections, panel, is_train, verbose)
+    else:
+        from her2st_dataset import Her2stCLIPDataset
+        ds = Her2stCLIPDataset(args.root, sections, panel, is_train, verbose)
+
+    # colour ablation. "query" converts only the held-out section, so the
+    # model sees colour everywhere it trained and grayscale only on the input
+    # under test. "all" converts everything.
+    ds.gray = getattr(args, "gray", "none")
+    held_out = set()
+    if getattr(args, "test_section", None):
+        held_out.add(args.test_section)
+    if getattr(args, "test_sections", None):
+        held_out.update(s.strip() for s in str(args.test_sections).replace(
+            ",", " ").split())
+    ds.is_query = bool(held_out) and set(sections) <= held_out
+    if verbose and ds.gray != "none":
+        print(f"[gray] mode={ds.gray} is_query={ds.is_query} "
+              f"sections={sorted(sections)}")
+    return ds

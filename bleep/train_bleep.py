@@ -31,6 +31,8 @@ import splits
 from her2st_dataset import load_panel
 from models import CLIPModel
 from patch_cache import build_dataset
+import json
+from gray import GRAY_MODES, gray_provenance
 
 
 class AvgMeter:
@@ -89,6 +91,7 @@ def main():
     ap.add_argument("--batch_size", type=int, default=256)
     ap.add_argument("--num_workers", type=int, default=8)
     ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--gray", choices=GRAY_MODES, default="none")
     args = ap.parse_args()
 
     torch.manual_seed(args.seed)
@@ -157,6 +160,14 @@ def main():
             "wall_seconds": round(time.time() - t0, 1),
         }, fh, indent=2)
     print(f"saved -> {args.out}")
+    rj = os.path.join(args.out, "run.json")
+    meta = {}
+    if os.path.exists(rj):
+        with open(rj) as fh:
+            meta = json.load(fh)
+    meta.update(gray_provenance(args.gray))
+    with open(rj, "w") as fh:
+        json.dump(meta, fh, indent=2)
 
 
 if __name__ == "__main__":
