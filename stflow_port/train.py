@@ -142,6 +142,7 @@ def main():
         a.device = "cpu"
     device = a.device
     if torch.cuda.is_available():
+        torch.cuda.set_device(device)
         torch.cuda.reset_peak_memory_stats(device)
 
     data, genes, man = load_cache(a.cache_tag)
