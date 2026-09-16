@@ -80,6 +80,32 @@ def maybe_gray(patch: np.ndarray, gray_mode: str, *, is_query: bool) -> np.ndarr
     return apply_gray_uint8(patch) if is_query else patch
 
 
+def gray_any(patch, gray_mode: str, *, is_query: bool):
+    """Same as maybe_gray, but accepts a PIL Image or a uint8 array.
+
+    `her2st_dataset.Section.patch(i)` may hand back either depending on whether
+    the patch cache or the JPEG path is in use, so this wrapper takes whatever
+    comes and returns the same type. That keeps the dataset edit to one line
+    and removes any chance of the two grayscale arms differing because one went
+    through PIL and the other through numpy.
+    """
+    if gray_mode == "none":
+        return patch
+    if not (gray_mode == "all" or (gray_mode == "query" and is_query)):
+        return patch
+
+    if isinstance(patch, np.ndarray):
+        return apply_gray_uint8(patch)
+
+    # PIL Image. Convert via numpy rather than Image.convert("L") so the exact
+    # same arithmetic is used on both paths.
+    from PIL import Image
+    arr = np.asarray(patch)
+    if arr.ndim == 3 and arr.shape[-1] == 4:  # RGBA
+        arr = arr[..., :3]
+    return Image.fromarray(apply_gray_uint8(np.ascontiguousarray(arr)))
+
+
 def gray_fingerprint() -> str:
     """Hash of the transform's source text. Catches edits to the code."""
     src = inspect.getsource(apply_gray_uint8) + repr(_LUMA.tolist())
