@@ -1,0 +1,83 @@
+{
+  "sections": [
+    "B1",
+    "B2",
+    "B3",
+    "B4",
+    "B5",
+    "B6"
+  ],
+  "n_genes": 833,
+  "per_gene_pcc_by_arm": {
+    "arm1": 0.366490753265742,
+    "arm2": 0.3258776174334732,
+    "arm3": 0.3635360107938926
+  },
+  "alignment_by_arm": {
+    "arm1": null,
+    "arm2": null,
+    "arm3": null
+  },
+  "paired": {
+    "pcc_mean | gray_train_gray_test - colour_train_colour_test": {
+      "mean_delta": -0.0029547424718493844,
+      "sections_up": "1/6",
+      "wilcoxon_p": 0.09375
+    },
+    "pcc_mean | colour_train_gray_test - colour_train_colour_test": {
+      "mean_delta": -0.0406131358322688,
+      "sections_up": "0/6",
+      "wilcoxon_p": 0.03125
+    },
+    "pcc_mean | gray_train_gray_test - colour_train_gray_test": {
+      "mean_delta": 0.03765839336041941,
+      "sections_up": "6/6",
+      "wilcoxon_p": 0.03125
+    },
+    "sse_ratio_median | gray_train_gray_test - colour_train_colour_test": {
+      "mean_delta": -0.001874750007411441,
+      "sections_up": "3/6",
+      "wilcoxon_p": 0.84375
+    },
+    "sse_ratio_median | colour_train_gray_test - colour_train_colour_test": {
+      "mean_delta": 0.059910422951363985,
+      "sections_up": "6/6",
+      "wilcoxon_p": 0.03125
+    },
+    "sse_ratio_median | gray_train_gray_test - colour_train_gray_test": {
+      "mean_delta": -0.061785172958775426,
+      "sections_up": "0/6",
+      "wilcoxon_p": 0.03125
+    },
+    "frac_beat_baseline | gray_train_gray_test - colour_train_colour_test": {
+      "mean_delta": 0.004401760704281721,
+      "sections_up": "2/6",
+      "wilcoxon_p": 0.84375
+    },
+    "frac_beat_baseline | colour_train_gray_test - colour_train_colour_test": {
+      "mean_delta": -0.16746698679471791,
+      "sections_up": "0/6",
+      "wilcoxon_p": 0.03125
+    },
+    "frac_beat_baseline | gray_train_gray_test - colour_train_gray_test": {
+      "mean_delta": 0.17186874749899964,
+      "sections_up": "6/6",
+      "wilcoxon_p": 0.03125
+    },
+    "sd_ratio_median | gray_train_gray_test - colour_train_colour_test": {
+      "mean_delta": -0.011577134554864735,
+      "sections_up": "2/6",
+      "wilcoxon_p": 0.5625
+    },
+    "sd_ratio_median | colour_train_gray_test - colour_train_colour_test": {
+      "mean_delta": -0.05131932876394949,
+      "sections_up": "0/6",
+      "wilcoxon_p": 0.03125
+    },
+    "sd_ratio_median | gray_train_gray_test - colour_train_gray_test": {
+      "mean_delta": 0.03974219420908476,
+      "sections_up": "5/6",
+      "wilcoxon_p": 0.09375
+    }
+  }
+}
