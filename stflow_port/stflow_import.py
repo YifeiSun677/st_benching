@@ -182,6 +182,9 @@ def load():
 
 
 def build_interpolant(args, prior_mu=None, prior_sd=None):
+    """Upstream Interpolant with the ZINB prior swapped in (no scvi dependency).
+    Upstream: Interpolant(prior, total_count=..., logits=..., zi_logits=...,
+                          normalize = prior != 'gaussian')."""
     U = load()
     dev = "cuda" if getattr(args, "prior_on_gpu", False) else "cpu"
     if args.prior_sampler == "gaussian_fitted":
@@ -192,7 +195,12 @@ def build_interpolant(args, prior_mu=None, prior_sd=None):
         interp.prior_sampler.prior_sample_type = "gaussian_fitted"
         return interp
     if args.prior_sampler != "zinb":
-        ...unchanged from here...
+        return U["Interpolant"](args.prior_sampler, normalize=args.prior_sampler != "gaussian")
+    interp = U["Interpolant"]("zero", normalize=True)
+    fn = make_zinb_sampler(args.zinb_total_count, args.zinb_logits, args.zinb_zi_logits, dev)
+    interp.prior_sampler.prior_sampler = fn
+    interp.prior_sampler.prior_sample_type = "zinb"
+    return interp
 
 
 def git_commit(path):
