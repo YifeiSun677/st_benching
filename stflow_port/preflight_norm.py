@@ -55,18 +55,53 @@ def _pick(z, candidates, what):
     raise KeyError(f"no {what} array found in npz; keys are {z.files}")
 
 
-def find_fold_npz(run_dir):
-    pats = [os.path.join(run_dir, "*", "preds*.npz"),
-            os.path.join(run_dir, "*", "*.npz"),
-            os.path.join(run_dir, "*.npz")]
-    out = []
-    for p in pats:
-        out = sorted(glob.glob(p))
-        if out:
-            break
-    if not out:
+def discover(run_dir, pattern=None):
+    """Return {fold_name: [section npz paths]} for the layout
+    run/fold*/preds/<section>.npz, falling back to flatter layouts.
+    Directories named _scored* are skipped."""
+    if pattern:
+        files = sorted(glob.glob(pattern, recursive=True))
+    else:
+        files = []
+        for pat in (os.path.join(run_dir, "*", "preds", "*.npz"),
+                    os.path.join(run_dir, "*", "preds*.npz"),
+                    os.path.join(run_dir, "*", "*.npz"),
+                    os.path.join(run_dir, "*.npz")):
+            files = sorted(glob.glob(pat))
+            if files:
+                break
+    files = [f for f in files if os.sep + "_scored" not in f]
+    if not files:
         raise SystemExit(f"no npz files found under {run_dir}")
-    return out
+    folds = {}
+    for f in files:
+        d = os.path.dirname(f)
+        fold = (os.path.basename(os.path.dirname(d))
+                if os.path.basename(d) == "preds" else os.path.basename(d))
+        if fold in ("", os.path.basename(run_dir)):
+            fold = os.path.splitext(os.path.basename(f))[0]
+        folds.setdefault(fold, []).append(f)
+    return {k: sorted(v) for k, v in sorted(folds.items())}
+
+
+def load_group(paths, want_pred=True):
+    """Concatenate one fold's sections. Returns (pred, truth, genes, sections)."""
+    P, T, S, genes = [], [], [], None
+    for f in paths:
+        z = np.load(f, allow_pickle=True)
+        t = np.asarray(z[_pick(z, TRUTH_KEYS, "truth")], dtype=np.float64)
+        T.append(t)
+        if want_pred:
+            P.append(np.asarray(z[_pick(z, PRED_KEYS, "pred")], dtype=np.float64))
+        if "genes" in z.files:
+            g = [str(x) for x in z["genes"]]
+            if genes is None:
+                genes = g
+            elif g != genes:
+                raise SystemExit(f"gene order differs in {f}")
+        S += [os.path.splitext(os.path.basename(f))[0]] * t.shape[0]
+    return (np.concatenate(P, 0) if want_pred else None,
+            np.concatenate(T, 0), genes, np.array(S))
 
 
 def per_gene_pcc(pred, truth):
@@ -90,41 +125,39 @@ def main():
     ap.add_argument("--score_module", default=None,
                     help="module:function implementing score.py's panel_cp10k renorm")
     ap.add_argument("--sd_floor", type=float, default=1e-3)
+    ap.add_argument("--glob", default=None, help="override the npz search pattern")
     ap.add_argument("--holdout", default=None,
                     help="fold name to treat as held out when fitting the demo prior")
     args = ap.parse_args()
 
     report = {"old_run": args.old_run, "checks": {}}
-    files = find_fold_npz(args.old_run)
-    print(f"[1] found {len(files)} prediction files under {args.old_run}")
+    folds = discover(args.old_run, args.glob)
+    n_files = sum(len(v) for v in folds.values())
+    print(f"[1] {len(folds)} folds, {n_files} section files under {args.old_run}")
 
     panel = None
     if args.panel:
         panel = [l.strip() for l in open(args.panel) if l.strip()]
         print(f"    panel file: {len(panel)} genes")
 
-    # ---------------------------------------------------------- 1. recover counts
     per_fold, counts_by_fold, genes_ref = {}, {}, None
-    for f in files:
-        z = np.load(f, allow_pickle=True)
-        tk = _pick(z, TRUTH_KEYS, "truth")
-        y_raw = np.asarray(z[tk], dtype=np.float64)
-        counts = invert_raw_log1p(y_raw, round_to_int=True)
-        name = os.path.basename(os.path.dirname(f)) or os.path.basename(f)
-        counts_by_fold[name] = counts
-        if "genes" in z.files:
-            g = [str(x) for x in z["genes"]]
+    for name, paths in folds.items():
+        _, y_raw, genes, sections = load_group(paths, want_pred=False)
+        if genes is not None:
             if genes_ref is None:
-                genes_ref = g
-            elif g != genes_ref:
-                raise SystemExit(f"gene order differs in {f} - folds are not aligned")
+                genes_ref = genes
+            elif genes != genes_ref:
+                raise SystemExit(f"gene order differs in fold {name}")
+        counts = invert_raw_log1p(y_raw, round_to_int=True)
+        counts_by_fold[name] = counts
         per_fold[name] = {
-            "file": f, "truth_key": tk,
+            "sections": sorted(set(sections.tolist())),
             "raw": target_report(counts, "raw_log1p"),
             "panel_cp10k": target_report(counts, "panel_cp10k_log1p"),
         }
         r = per_fold[name]
-        print(f"    {name:12s} spots={r['raw']['n_spots']:5d} genes={r['raw']['n_genes']:4d} "
+        print(f"    {name:12s} {len(r['sections'])} sections "
+              f"spots={r['raw']['n_spots']:5d} genes={r['raw']['n_genes']:4d} "
               f"depth_med={r['raw']['panel_depth_median']:7.0f} "
               f"zero_depth={r['raw']['n_zero_depth_spots']:3d} "
               f"| raw max {r['raw']['target_max']:.2f} "

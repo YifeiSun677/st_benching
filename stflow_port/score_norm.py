@@ -48,6 +48,55 @@ def _pick(z, cands, what):
     raise KeyError(f"no {what} array in npz; keys are {z.files}")
 
 
+def discover(run_dir, pattern=None):
+    """Return {fold_name: [section npz paths]} for the layout
+    run/fold*/preds/<section>.npz, falling back to flatter layouts.
+    Directories named _scored* are skipped."""
+    if pattern:
+        files = sorted(glob.glob(pattern, recursive=True))
+    else:
+        files = []
+        for pat in (os.path.join(run_dir, "*", "preds", "*.npz"),
+                    os.path.join(run_dir, "*", "preds*.npz"),
+                    os.path.join(run_dir, "*", "*.npz"),
+                    os.path.join(run_dir, "*.npz")):
+            files = sorted(glob.glob(pat))
+            if files:
+                break
+    files = [f for f in files if os.sep + "_scored" not in f]
+    if not files:
+        raise SystemExit(f"no npz files found under {run_dir}")
+    folds = {}
+    for f in files:
+        d = os.path.dirname(f)
+        fold = (os.path.basename(os.path.dirname(d))
+                if os.path.basename(d) == "preds" else os.path.basename(d))
+        if fold in ("", os.path.basename(run_dir)):
+            fold = os.path.splitext(os.path.basename(f))[0]
+        folds.setdefault(fold, []).append(f)
+    return {k: sorted(v) for k, v in sorted(folds.items())}
+
+
+def load_group(paths, want_pred=True):
+    """Concatenate one fold's sections. Returns (pred, truth, genes, sections)."""
+    P, T, S, genes = [], [], [], None
+    for f in paths:
+        z = np.load(f, allow_pickle=True)
+        t = np.asarray(z[_pick(z, TRUTH_KEYS, "truth")], dtype=np.float64)
+        T.append(t)
+        if want_pred:
+            P.append(np.asarray(z[_pick(z, PRED_KEYS, "pred")], dtype=np.float64))
+        if "genes" in z.files:
+            g = [str(x) for x in z["genes"]]
+            if genes is None:
+                genes = g
+            elif g != genes:
+                raise SystemExit(f"gene order differs in {f}")
+        S += [os.path.splitext(os.path.basename(f))[0]] * t.shape[0]
+    return (np.concatenate(P, 0) if want_pred else None,
+            np.concatenate(T, 0), genes, np.array(S))
+
+
 def renorm(arr, mode):
     """arr is log1p(raw counts). Return it on the requested footing."""
     if mode == "none":
@@ -104,36 +153,28 @@ def main():
     ap.add_argument("--renorm", choices=["none", "panel_cp10k"], default="none")
     ap.add_argument("--out", default=None)
     ap.add_argument("--glob", default=None, help="override the npz search pattern")
+    ap.add_argument("--group", choices=["fold", "section"], default="fold",
+                    help="compute per-gene PCC over a whole patient (fold) or per section")
     args = ap.parse_args()
 
-    pats = [args.glob] if args.glob else [
-        os.path.join(args.run, "*", "preds*.npz"),
-        os.path.join(args.run, "*", "*.npz"),
-        os.path.join(args.run, "*.npz")]
-    files = []
-    for p in pats:
-        files = sorted(glob.glob(p))
-        if files:
-            break
-    if not files:
-        raise SystemExit(f"no npz under {args.run}")
+    folds = discover(args.run, args.glob)
+    print(f"{len(folds)} folds, {sum(len(v) for v in folds.values())} section files\n")
 
     rows, all_pcc = [], []
-    for f in files:
-        z = np.load(f, allow_pickle=True)
-        pk, tk = _pick(z, PRED_KEYS, "pred"), _pick(z, TRUTH_KEYS, "truth")
-        genes = [str(x) for x in z["genes"]] if "genes" in z.files else None
-        pred = renorm(z[pk], args.renorm)
-        truth = renorm(z[tk], args.renorm)
-        name = os.path.basename(os.path.dirname(f)) or os.path.splitext(os.path.basename(f))[0]
-        m, pcc = fold_metrics(pred, truth, genes)
-        m["fold"] = name
-        m["file"] = f
-        rows.append(m)
-        all_pcc.append(pcc)
-        print(f"{name:14s} pcc {m['pcc_mean']:+.4f}  med {m['pcc_median']:+.4f}  "
-              f"frac+ {m['frac_positive']:.3f}  sse {m['sse_ratio_median']:.3f}  "
-              f"beat {m['frac_beat_baseline']:.3f}  sd {m['sd_ratio_median']:.3f}")
+    for name, paths in folds.items():
+        pred_raw, truth_raw, genes, sections = load_group(paths, want_pred=True)
+        units = ({name: (pred_raw, truth_raw)} if args.group == "fold" else
+                 {f"{name}/{s}": (pred_raw[sections == s], truth_raw[sections == s])
+                  for s in sorted(set(sections.tolist()))})
+        for unit, (pr, tr) in units.items():
+            m, pcc = fold_metrics(renorm(pr, args.renorm), renorm(tr, args.renorm), genes)
+            m["fold"] = unit
+            m["n_sections"] = len(paths) if args.group == "fold" else 1
+            rows.append(m)
+            all_pcc.append(pcc)
+            print(f"{unit:16s} pcc {m['pcc_mean']:+.4f}  med {m['pcc_median']:+.4f}  "
+                  f"frac+ {m['frac_positive']:.3f}  sse {m['sse_ratio_median']:.3f}  "
+                  f"beat {m['frac_beat_baseline']:.3f}  sd {m['sd_ratio_median']:.3f}")
 
     head = {
         "run": args.run, "renorm": args.renorm, "n_folds": len(rows),
