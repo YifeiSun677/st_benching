@@ -35,8 +35,9 @@ METHOD="${METHOD:-average}"
 
 SECTIONS=(B1 B2 B3 B4 B5 B6)
 
-cd "$REPO"
-export PYTHONPATH="$REPO:${PYTHONPATH:-}"
+# The ported modules use flat imports (from her2st_dataset import ...), so
+# they are run as scripts from inside bleep/, exactly as run_patient.sh does.
+cd "$REPO/bleep"
 log() { echo -e "\n=== $* ===\n"; }
 
 # The checkpoint filename is whatever train_bleep.py writes; find it rather
@@ -63,7 +64,7 @@ run_arm2() {
         | sort | tail -n 1)
     [[ -z "$CKPT" ]] && { echo "FATAL: no arm-1 checkpoint for $SEC" >&2; exit 2; }
     echo "[$FOLD] ckpt: $CKPT"
-    python -m bleep.infer_bleep \
+    python infer_bleep.py \
       --root "$ROOT" --panel "$PANEL" --cache "$CACHE" \
       --ckpt "$CKPT" --out "$ARM2_RUN/$FOLD" \
       --patient "$PATIENT" --test_section "$SEC" \
@@ -80,7 +81,7 @@ run_arm3() {
     SEC="${SECTIONS[$i]}"
     FOLD=$(printf "fold%02d_%s" "$i" "$SEC")
     echo "[$FOLD] held out: $SEC"
-    python -m bleep.train_bleep \
+    python train_bleep.py \
       --root "$ROOT" --panel "$PANEL" --cache "$CACHE" \
       --out "$ARM3_RUN/$FOLD" --fold_name "$FOLD" \
       --patient "$PATIENT" --test_section "$SEC" \
@@ -90,7 +91,7 @@ run_arm3() {
 
     CKPT=$(find_ckpt "$ARM3_RUN/$FOLD")
     [[ -z "$CKPT" ]] && { echo "FATAL: train wrote no checkpoint in $ARM3_RUN/$FOLD" >&2; exit 2; }
-    python -m bleep.infer_bleep \
+    python infer_bleep.py \
       --root "$ROOT" --panel "$PANEL" --cache "$CACHE" \
       --ckpt "$CKPT" --out "$ARM3_RUN/$FOLD" \
       --patient "$PATIENT" --test_section "$SEC" \
@@ -111,7 +112,7 @@ esac
 log "done. arm2=$ARM2_RUN  arm3=$ARM3_RUN"
 cat <<EOF
 next:
-  python -m bleep.score_gray_paired \\
+  cd "$REPO" && python -m bleep.score_gray_paired \\
     --arm1 "$ARM1_RUN" --arm2 "$ARM2_RUN" --arm3 "$ARM3_RUN" \\
     --out  "$REPO/results/bleep_gray_patientB"
 EOF
