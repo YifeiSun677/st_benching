@@ -145,7 +145,14 @@ def main():
         torch.cuda.set_device(device)
         torch.cuda.reset_peak_memory_stats(device)
 
-    data, genes, man = load_cache(a.cache_tag)
+        data, genes, man = load_cache(a.cache_tag)
+    if a.normalize_method == "panel_cp10k_log1p":
+        from norm_target import build_target, invert_raw_log1p, assert_sane
+        for s in data:
+            data[s]["labels"] = build_target(
+                invert_raw_log1p(data[s]["labels"]), "panel_cp10k_log1p")
+        assert_sane(np.concatenate([data[s]["labels"] for s in sorted(data)], 0),
+                    "panel_cp10k_log1p")
     a.n_genes = len(genes)
     a.feature_dim = C.UNI_FEATURE_DIM
     if a.overfit_section:
@@ -162,7 +169,15 @@ def main():
     U = load()
     model = U["Denoiser"](a).to(device)
     n_params = sum(p.numel() for p in model.parameters())
-    interp = build_interpolant(a)
+    prior_mu = prior_sd = None
+    if a.prior_sampler == "gaussian_fitted":
+        ytr = np.concatenate([data[s]["labels"] for s in train_s], 0).astype(np.float64)
+        prior_mu = ytr.mean(0).astype(np.float32)
+        prior_sd = np.maximum(ytr.std(0), a.prior_sd_floor).astype(np.float32)
+        print(f"[prior] gaussian_fitted on {len(ytr)} train spots, "
+              f"sd median {np.median(prior_sd):.4f}, "
+              f"{int((prior_sd <= a.prior_sd_floor).sum())} genes at floor")
+    interp = build_interpolant(a, prior_mu, prior_sd)
     opt = torch.optim.Adam(model.parameters(), lr=a.lr)
     train_set = TrainSet([data[s] for s in train_s], a.patch_distribution, a.sample_times)
     loader = torch.utils.data.DataLoader(train_set, batch_size=a.batch_size,

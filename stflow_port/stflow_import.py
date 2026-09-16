@@ -145,6 +145,19 @@ def make_zinb_sampler(total_count, logits, zi_logits, device="cpu"):
     )
     return sample
 
+def make_gaussian_sampler(mu, sd, device="cpu"):
+    """Per-gene Gaussian already on the TARGET scale, so the Interpolant must
+    run with normalize=False (normalize=True would log1p a possibly-negative
+    sample and produce NaN)."""
+    import torch
+    m = torch.as_tensor(mu, dtype=torch.float32, device=device)
+    s = torch.as_tensor(sd, dtype=torch.float32, device=device)
+
+    def sample(shape):
+        with torch.no_grad():
+            return m + s * torch.randn(tuple(shape), device=device)
+    return sample
+
 
 def load():
     """Returns a dict of upstream objects (imported once, patched once)."""
@@ -168,19 +181,18 @@ def load():
     return _LOADED
 
 
-def build_interpolant(args):
-    """Upstream Interpolant with the ZINB prior swapped in (no scvi dependency).
-    Upstream: Interpolant(prior, total_count=..., logits=..., zi_logits=...,
-                          normalize = prior != 'gaussian')."""
+def build_interpolant(args, prior_mu=None, prior_sd=None):
     U = load()
-    if args.prior_sampler != "zinb":
-        return U["Interpolant"](args.prior_sampler, normalize=args.prior_sampler != "gaussian")
-    interp = U["Interpolant"]("zero", normalize=True)
     dev = "cuda" if getattr(args, "prior_on_gpu", False) else "cpu"
-    fn = make_zinb_sampler(args.zinb_total_count, args.zinb_logits, args.zinb_zi_logits, dev)
-    interp.prior_sampler.prior_sampler = fn
-    interp.prior_sampler.prior_sample_type = "zinb"
-    return interp
+    if args.prior_sampler == "gaussian_fitted":
+        if prior_mu is None:
+            raise ValueError("gaussian_fitted needs prior_mu/prior_sd")
+        interp = U["Interpolant"]("zero", normalize=False)
+        interp.prior_sampler.prior_sampler = make_gaussian_sampler(prior_mu, prior_sd, dev)
+        interp.prior_sampler.prior_sample_type = "gaussian_fitted"
+        return interp
+    if args.prior_sampler != "zinb":
+        ...unchanged from here...
 
 
 def git_commit(path):
