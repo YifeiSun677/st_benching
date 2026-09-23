@@ -83,6 +83,16 @@ WEIGHT_DECAY  = 0.0
 SEED          = 2021
 FREEZE_TARGET = False       # set True to freeze the ResNet18 target encoder (faster, off-paper)
 
+# ---------------------------------------------------------------- checkpoints
+# Saved on the persistent volume (/workspace), NOT in git. Layout:
+#   CKPT_DIR/<tag>/fold_<patient>/final.pt       weights at the LAST epoch (the scored model)
+#   CKPT_DIR/<tag>/fold_<patient>/resume.pt      model+optimizer+RNG, for --resume after a pod dies
+#   CKPT_DIR/<tag>/fold_<patient>/epoch_XXX.pt   optional weights-only snapshots
+# Saving never touches the RNG, so a run with checkpointing trains exactly as before.
+CKPT_DIR       = os.environ.get("TRIPLEX_CKPT", "/workspace/triplex_ckpt")
+CKPT_EVERY     = int(os.environ.get("TRIPLEX_CKPT_EVERY", "10"))      # resume.pt cadence (epochs); 0 = off
+SNAPSHOT_EVERY = int(os.environ.get("TRIPLEX_SNAPSHOT_EVERY", "0"))   # weights-only history; 0 = off
+
 # her2st patients in fold order (LOPO = leave-one-patient-out, 8 folds).
 PATIENTS = ["A", "B", "C", "D", "E", "F", "G", "H"]
 

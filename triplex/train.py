@@ -23,6 +23,36 @@ def _to_device(batch, device):
     return {k: (v.to(device) if torch.is_tensor(v) else v) for k, v in batch.items()}
 
 
+# ---------------------------------------------------------------- checkpoints
+def _atomic_save(obj, path):
+    """Write to a temp file then rename, so a pod dying mid-write never leaves a
+    truncated checkpoint in place of a good one."""
+    tmp = path + ".tmp"
+    torch.save(obj, tmp)
+    os.replace(tmp, path)
+
+
+def _rng_state():
+    st = {"torch": torch.get_rng_state(), "numpy": np.random.get_state()}
+    if torch.cuda.is_available():
+        st["cuda"] = torch.cuda.get_rng_state_all()
+    return st
+
+
+def _set_rng_state(st):
+    torch.set_rng_state(st["torch"])
+    np.random.set_state(st["numpy"])
+    if "cuda" in st and torch.cuda.is_available():
+        torch.cuda.set_rng_state_all(st["cuda"])
+
+
+def _save_resume(ckpt_dir, model, opt, epoch_done, per_epoch, probe_curve, meta):
+    _atomic_save(dict(model=model.state_dict(), optimizer=opt.state_dict(),
+                      epoch=epoch_done, per_epoch=per_epoch,
+                      probe_curve=probe_curve, rng=_rng_state(), meta=meta),
+                 os.path.join(ckpt_dir, "resume.pt"))
+
+
 def _heldout_pcc(model, test_ds, test_sections, device):
     """Quick calibration metric: per-section per-gene Pearson r, averaged across
     the held-out sections then over genes (nan-safe). Same spirit as score.py;
@@ -49,7 +79,7 @@ def _heldout_pcc(model, test_ds, test_sections, device):
 
 
 def train_fold(patient, tag, epochs=None, lr=None, batch_size=None, device=None,
-               probe_every=0):
+               probe_every=0, resume=False):
     epochs = epochs or config.EPOCHS
     lr = lr or config.LR
     batch_size = batch_size or config.BATCH_SIZE
@@ -83,9 +113,31 @@ def train_fold(patient, tag, epochs=None, lr=None, batch_size=None, device=None,
     opt = torch.optim.Adam([p for p in model.parameters() if p.requires_grad],
                            lr=lr, weight_decay=config.WEIGHT_DECAY)
 
-    t0 = time.time()
+    ckpt_dir = os.path.join(config.CKPT_DIR, tag, f"fold_{patient}")
+    os.makedirs(ckpt_dir, exist_ok=True)
+    meta = dict(patient=patient, tag=tag, epochs=epochs, lr=lr, batch_size=batch_size,
+                cpm=config.CPM, smooth=config.SMOOTH, freeze_target=config.FREEZE_TARGET,
+                model_kwargs=config.MODEL_KWARGS, seed=config.SEED,
+                train_sections=train_sections, test_sections=test_sections)
+
+    start_ep = 0
     per_epoch = []
-    for ep in range(epochs):
+    resume_path = os.path.join(ckpt_dir, "resume.pt")
+    if resume and os.path.isfile(resume_path):
+        ck = torch.load(resume_path, map_location=device, weights_only=False)
+        if ck["meta"]["epochs"] != epochs:
+            raise SystemExit(f"[fold {patient}] resume.pt was for {ck['meta']['epochs']} "
+                             f"epochs, this run asks for {epochs}; refusing to mix budgets")
+        model.load_state_dict(ck["model"])
+        opt.load_state_dict(ck["optimizer"])
+        _set_rng_state(ck["rng"])       # epoch-boundary RNG -> same shuffle/augment order
+        start_ep = ck["epoch"]
+        per_epoch = list(ck["per_epoch"])
+        probe_curve = list(ck.get("probe_curve", []))
+        print(f"[fold {patient}] RESUMED from epoch {start_ep}/{epochs} ({resume_path})")
+
+    t0 = time.time()
+    for ep in range(start_ep, epochs):
         model.train()
         te, running = time.time(), 0.0
         for batch in loader:
@@ -109,6 +161,19 @@ def train_fold(patient, tag, epochs=None, lr=None, batch_size=None, device=None,
             msg += f"  | held-out pcc {r:.4f}"
         if ep < 3 or (ep + 1) % 10 == 0 or ep == epochs - 1 or probe_curve:
             print(msg)
+
+        done = ep + 1
+        if config.SNAPSHOT_EVERY and done % config.SNAPSHOT_EVERY == 0:
+            _atomic_save(dict(model=model.state_dict(), epoch=done, meta=meta),
+                         os.path.join(ckpt_dir, f"epoch_{done:03d}.pt"))
+        if config.CKPT_EVERY and done % config.CKPT_EVERY == 0 and done < epochs:
+            _save_resume(ckpt_dir, model, opt, done, per_epoch, probe_curve, meta)
+
+    # ---- final (scored) weights: last epoch, weights only ----
+    _atomic_save(dict(model=model.state_dict(), epoch=epochs,
+                      train_loss_curve=per_epoch, meta=meta),
+                 os.path.join(ckpt_dir, "final.pt"))
+    print(f"[fold {patient}] saved {os.path.join(ckpt_dir, 'final.pt')}")
 
     # ---- last-epoch inference on the held-out patient ----
     out_dir = os.path.join(config.OUTPUT_DIR, tag, f"fold_{patient}")
@@ -142,8 +207,12 @@ def train_fold(patient, tag, epochs=None, lr=None, batch_size=None, device=None,
         print(f"[fold {patient}] held-out probe: peak pcc {best['heldout_pcc_mean']:.4f} "
               f"at epoch {best['epoch']}, last {probe_curve[-1]['heldout_pcc_mean']:.4f} "
               f"at epoch {probe_curve[-1]['epoch']}")
+    run["checkpoint"] = os.path.join(ckpt_dir, "final.pt")
+    run["resumed_from_epoch"] = start_ep
     with open(os.path.join(out_dir, "run.json"), "w") as f:
         json.dump(run, f, indent=2)
+    if os.path.isfile(resume_path):
+        os.remove(resume_path)          # fold finished; final.pt is the keeper
     print(f"[fold {patient}] done in {run['seconds_total']/60:.1f} min -> {out_dir}")
     return out_dir
 
@@ -158,6 +227,8 @@ if __name__ == "__main__":
     ap.add_argument("--probe_every", type=int, default=0,
                     help="log held-out PCC every N epochs (calibration only; "
                          "does not affect final last-epoch scoring)")
+    ap.add_argument("--resume", action="store_true",
+                    help="continue from CKPT_DIR/<tag>/fold_<patient>/resume.pt if present")
     a = ap.parse_args()
     train_fold(a.patient, a.tag, epochs=a.epochs, lr=a.lr,
-               batch_size=a.batch_size, probe_every=a.probe_every)
+               batch_size=a.batch_size, probe_every=a.probe_every, resume=a.resume)
