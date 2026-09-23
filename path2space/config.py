@@ -39,5 +39,12 @@ SMOOTH_RADIUS = 2       # Path2Space 的 KDTree 空间平滑（array-coord 上�
 
 SEED = 42
 
+# ---- checkpoints（存在 /workspace 网络卷上，不进 git）----
+# CKPT_DIR/<tag>/fold_<P>/ik_<k>.pt  = 该 ik 的 N_IL 个 MLP state_dict + 元数据
+# 以 ik 为粒度保存/续跑：每个 MLP 训练前都 torch.manual_seed(自己的 seed)，
+# 所以跳过已完成的 ik 不会改变后面任何 MLP —— 续跑结果与一口气跑完一致。
+import os as _os
+CKPT_DIR = Path(_os.environ.get("P2S_CKPT", "/workspace/p2s_ckpt"))
+
 # ---- 测试模式（Step 3）----
 TEST_PATIENTS = ["A", "B"]   # 只对这两个 patient 建特征 + 跑 2-fold mini-LOPO
