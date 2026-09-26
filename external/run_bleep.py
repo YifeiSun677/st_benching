@@ -27,7 +27,23 @@ sys.path.insert(0, HERE)
 import common as K
 
 sys.path.insert(0, str(K.ST_BENCH / "bleep"))
-from her2st_dataset import Her2stCLIPDataset, align_to_panel, cpm_log1p, read_counts  # noqa: E402
+import her2st_dataset as HD  # noqa: E402
+from her2st_dataset import Her2stCLIPDataset, align_to_panel, cpm_log1p  # noqa: E402
+
+
+def _read_counts_any(root, section):
+    """The port hard-codes ST-cnts/<sec>.tsv.gz; the pod's her2st copy may hold plain .tsv.
+    Accept either, same parsing (tab-separated, first column = 'XxY' spot id)."""
+    import pandas as pd
+    for ext in (".tsv.gz", ".tsv"):
+        p = os.path.join(root, "ST-cnts", f"{section}{ext}")
+        if os.path.exists(p):
+            return pd.read_csv(p, sep="\t", index_col=0)
+    raise FileNotFoundError(f"no ST-cnts/{section}.tsv[.gz] under {root}")
+
+
+HD.read_counts = _read_counts_any       # Her2stSection looks read_counts up in HD at call time
+read_counts = _read_counts_any
 from infer_bleep import embed  # noqa: E402
 from models import CLIPModel  # noqa: E402
 from patch_cache import CachedCLIPDataset  # noqa: E402
