@@ -66,6 +66,9 @@ def main():
     ap.add_argument("--batch_size", type=int, default=128)
     ap.add_argument("--num_workers", type=int, default=8)
     ap.add_argument("--skip_roundtrip", action="store_true")
+    ap.add_argument("--rt_tol", type=float, default=1e-3,
+                    help="max |PCC_new - PCC_stored| per section. Retrieval is discrete: a tiny embedding "
+                         "change swaps one of the top-50 neighbours, so exact pred equality is not expected")
     a = ap.parse_args()
 
     dev = "cuda" if torch.cuda.is_available() else "cpu"
@@ -138,8 +141,8 @@ def main():
             old = pd.read_csv(p, sep="\t")
             df = pd.concat([old[old.model != "bleep"], df])
         df.to_csv(p, sep="\t", index=False)
-        bad = df[(df.model == "bleep") & ((df.pcc_new - df.pcc_stored).abs() > 1e-4)]
-        print("ROUNDTRIP", "FAIL" if len(bad) else "PASS", f"({len(bad)} sections off by >1e-4)")
+        bad = df[(df.model == "bleep") & ((df.pcc_new - df.pcc_stored).abs() > a.rt_tol)]
+        print("ROUNDTRIP", "FAIL" if len(bad) else "PASS", f"({len(bad)} sections off by >{a.rt_tol:g})")
 
 
 if __name__ == "__main__":
