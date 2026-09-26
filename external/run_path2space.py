@@ -17,11 +17,13 @@ Per fold P:
 
 usage: cd /workspace/st_benching && python external/run_path2space.py --folds B
 needs: pip install spams-bin opencv-python-headless   (Macenko; only for Visium features)
-Macenko runs in a process pool (--workers, default = CPUs - 2) and prints progress every
+Macenko runs in a process pool (--workers, default = container CPUs - 1, max 16) and prints progress every
 500 tiles; features are cached, so an interrupted section restarts only that section.
 """
-import argparse
 import os
+for _v in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "NUMEXPR_NUM_THREADS"):
+    os.environ.setdefault(_v, "1")          # workers parallelise over tiles; no nested threads
+import argparse
 import sys
 import time
 
@@ -51,6 +53,25 @@ def per_gene_pcc(a, b):
         return (a * b).sum(0) / np.sqrt((a ** 2).sum(0) * (b ** 2).sum(0))
 
 
+def container_cpus():
+    """CPUs this container may actually use: cgroup quota if set, else affinity mask.
+    os.cpu_count() reports the HOST's cores, which over-subscribes a RunPod container."""
+    try:
+        q, p = open("/sys/fs/cgroup/cpu.max").read().split()
+        if q != "max":
+            return max(1, int(int(q) / int(p)))
+    except Exception:
+        pass
+    try:
+        q = int(open("/sys/fs/cgroup/cpu/cpu.cfs_quota_us").read())
+        p = int(open("/sys/fs/cgroup/cpu/cpu.cfs_period_us").read())
+        if q > 0:
+            return max(1, q // p)
+    except Exception:
+        pass
+    return len(os.sched_getaffinity(0))
+
+
 _G = {}     # per-process globals for the Macenko pool (filled before fork, or in the initializer)
 
 
@@ -71,21 +92,19 @@ def _one_tile(i):
         return tile, flag, 1
 
 
-def visium_features(sec, panel, workers):
-    """Mirror of path2space.build_features.build() for one Visium section, cached.
-    Macenko is per-tile and independent, so it is spread over `workers` processes;
-    tile order and every per-tile operation are unchanged."""
-    import multiprocessing as mp
-    FEAT_EXT.mkdir(parents=True, exist_ok=True)
-    f = FEAT_EXT / f"{sec}.npz"
+def _visium_spots(sec):
     cnt = K.read_counts(sec, K.VIS_ROOT)
     sp = K.read_spots(sec, K.VIS_ROOT)
     sp = sp[sp.index.isin(cnt.index)]                    # spot-file order, as build() does
-    if f.exists():
-        z = np.load(f, allow_pickle=True)
-        assert list(z["spot_id"]) == list(sp.index)
-        return z["feat"], cnt.loc[sp.index]
-    from path2space.p2s_import import CTransPathExtractor
+    return cnt.loc[sp.index], sp
+
+
+def macenko_tiles(sec, workers):
+    """Phase 1 (CPU only): crop + QC flag + per-tile Macenko, identical to build_features.build().
+    Runs BEFORE any CUDA use in this process: forking after CUDA / torch threads are live
+    can deadlock the pool workers (that is what hung the second section)."""
+    import multiprocessing as mp
+    cnt, sp = _visium_spots(sec)
     d = K.VIS_ROOT / "ST-imgs" / sec[0] / sec
     _G["img"] = np.asarray(Image.open(d / sorted(os.listdir(d))[0]).convert("RGB"))
     _G["px"] = np.round(sp.pixel_x.values).astype(int)
@@ -94,20 +113,53 @@ def visium_features(sec, panel, workers):
     n = len(sp)
     tiles, flags, n_fail = [None] * n, [0] * n, 0
     t0 = time.time()
-    ctx = mp.get_context("fork")                         # children inherit _G (image, coords)
-    with ctx.Pool(workers, initializer=_pool_init) as pool:
-        for i, (normed, flag, fail) in enumerate(pool.imap(_one_tile, range(n), chunksize=32)):
-            tiles[i], flags[i], n_fail = Image.fromarray(normed), flag, n_fail + fail
-            if (i + 1) % 500 == 0 or i + 1 == n:
-                el = time.time() - t0
-                print(f"  {sec}: Macenko {i+1}/{n} tiles, {el:.0f}s elapsed, "
-                      f"~{el/(i+1)*(n-i-1):.0f}s left", flush=True)
+
+    def _progress(i):
+        if (i + 1) % 500 == 0 or i + 1 == n:
+            el = time.time() - t0
+            print(f"  {sec}: Macenko {i+1}/{n} tiles, {el:.0f}s elapsed, "
+                  f"~{el/(i+1)*(n-i-1):.0f}s left", flush=True)
+
+    if workers <= 1:                                     # plain serial loop, no processes forked
+        _pool_init()
+        results, pool = map(_one_tile, range(n)), None
+    else:
+        pool = mp.get_context("fork").Pool(workers, initializer=_pool_init)
+        results = pool.imap(_one_tile, range(n), chunksize=32)
+    try:
+        for i, (normed, flag, fail) in enumerate(results):
+            tiles[i], flags[i], n_fail = normed, flag, n_fail + fail
+            _progress(i)
+    finally:
+        if pool is not None:
+            pool.close(); pool.join()
     del _G["img"]
-    feat = CTransPathExtractor(str(CTRANSPATH)).extract(tiles).astype(np.float32)
-    np.savez(f, feat=feat, spot_id=np.array(sp.index), select=np.array(flags, np.int8))
-    print(f"  {sec}: CTransPath features {feat.shape}, Macenko failed on {n_fail} tiles, "
-          f"{time.time()-t0:.0f}s total", flush=True)
-    return feat, cnt.loc[sp.index]
+    print(f"  {sec}: Macenko done, failed on {n_fail} tiles, {time.time()-t0:.0f}s", flush=True)
+    return np.stack(tiles), np.array(flags, np.int8), list(sp.index)
+
+
+def visium_features(sections, workers):
+    """Phase 1 Macenko for every uncached section (CPU, forks), THEN phase 2 CTransPath for
+    all of them with one extractor (GPU).  Features are cached per section."""
+    FEAT_EXT.mkdir(parents=True, exist_ok=True)
+    todo = [s for s in sections if not (FEAT_EXT / f"{s}.npz").exists()]
+    normed = {s: macenko_tiles(s, workers) for s in todo}          # no CUDA touched yet
+    if todo:
+        from path2space.p2s_import import CTransPathExtractor
+        ext = CTransPathExtractor(str(CTRANSPATH))
+        for s in todo:
+            tiles, flags, sid = normed.pop(s)
+            t0 = time.time()
+            feat = ext.extract([Image.fromarray(t) for t in tiles]).astype(np.float32)
+            np.savez(FEAT_EXT / f"{s}.npz", feat=feat, spot_id=np.array(sid), select=flags)
+            print(f"  {s}: CTransPath features {feat.shape}, {time.time()-t0:.0f}s", flush=True)
+    out = {}
+    for s in sections:
+        cnt, sp = _visium_spots(s)
+        z = np.load(FEAT_EXT / f"{s}.npz", allow_pickle=True)
+        assert list(z["spot_id"]) == list(sp.index), f"{s}: cached feature rows != spot file"
+        out[s] = (z["feat"], cnt)
+    return out
 
 
 def main():
@@ -117,17 +169,21 @@ def main():
     ap.add_argument("--out", default="/workspace/runs/ext_path2space")
     ap.add_argument("--skip_roundtrip", action="store_true")
     ap.add_argument("--rt_tol", type=float, default=1e-4)
-    ap.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 2),
-                    help="processes for per-tile Macenko (Visium features only)")
+    ap.add_argument("--workers", type=int, default=None,
+                    help="processes for per-tile Macenko (default: container CPUs - 1, max 16)")
     a = ap.parse_args()
+    if a.workers is None:
+        a.workers = max(1, min(16, container_cpus() - 1))
+    print(f"container CPUs {container_cpus()}, Macenko workers {a.workers}", flush=True)
     dev = "cuda" if torch.cuda.is_available() else "cpu"
     panel = K.load_panel()
     sbp = sections_by_patient()
     stored_dir = OUT_DIR.parent / TAG / "preds"
 
     vis = {}
+    feats = visium_features(a.sections, a.workers)
     for sec in a.sections:
-        feat, cnt = visium_features(sec, panel, a.workers)
+        feat, cnt = feats[sec]
         raw = cnt.reindex(columns=panel, fill_value=0).to_numpy(np.float32)
         truth = transform_counts(raw)
         agg, centres = K.aggregate_counts(raw.astype(np.float64), list(cnt.index), sec)
