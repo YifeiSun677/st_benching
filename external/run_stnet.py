@@ -63,11 +63,20 @@ def import_stnet():
 
 
 def norm_stats(P):
+    """Parse the per-fold image mean/std ST-Net logged at run start.  Tolerant to the exact
+    tensor repr (dtype=..., device=..., line breaks): takes the first two tensor([...]) groups
+    after the LAST 'Estimating mean' in the log."""
     txt = open(f"{RUN}/{P}_gene.log").read()
-    m = re.findall(r"Estimating mean \(tensor\(\[([^\]]+)\]\)\) and std \(tensor\(\[([^\]]+)\]\)\)", txt)
-    if not m:
-        raise SystemExit(f"no 'Estimating mean' line in {P}_gene.log")
-    mean, std = ([float(v) for v in s.split(",")] for s in m[-1])
+    i = txt.rfind("Estimating mean")
+    if i < 0:
+        raise SystemExit(f"no 'Estimating mean' in {P}_gene.log")
+    chunk = txt[i:i + 600]
+    groups = re.findall(r"tensor\(\s*\[([^\]]*)\]", chunk, flags=re.S)
+    if len(groups) < 2:
+        raise SystemExit(f"could not parse mean/std in {P}_gene.log near:\n{chunk[:300]}")
+    mean, std = ([float(v) for v in re.findall(r"[-+]?\d*\.\d+(?:[eE][-+]?\d+)?|\d+", g)] for g in groups[:2])
+    assert len(mean) == 3 and len(std) == 3, (mean, std)
+    print(f"  [{P}] log line: {' '.join(chunk.split())[:160]}")
     return mean, std
 
 
