@@ -62,13 +62,12 @@ def export(sec, ref, panel, ns, args):
     X, bc, names, ids = K.read_10x_h5(f["h5"])
 
     # ---- scale ------------------------------------------------------------
-    umpp = K.VISIUM_SPOT_UM / sf["spot_diameter_fullres"]
     tis = pos[pos.in_tissue == 1].copy()
-    umpp_nb = K.VISIUM_PITCH_UM / K.neighbour_distance_px(tis)
-    mism = abs(umpp - umpp_nb) / umpp_nb
-    if mism > 0.03 and not args.force:
-        raise SystemExit(f"{sec}: um/px from spot diameter {umpp:.4f} vs pitch {umpp_nb:.4f} "
-                         f"({100*mism:.1f}% > 3%). Wrong image/scalefactors -- fix Stage 1.")
+    sc = K.visium_scale(tis, sf)
+    umpp = sc["um_per_px"]                      # from the 100-um pitch, not spot_diameter_fullres
+    ok = sc["hex_skew_pct"] <= 2 and 60 <= sc["implied_spot_diam_um"] <= 70
+    if not ok and not args.force:
+        raise SystemExit(f"{sec}: scale sanity failed {sc} -- fix Stage 1.")
     fct = umpp / ref["um_per_px_ref"]
 
     # ---- spots: in tissue, >0 UMI --------------------------------------------
@@ -145,8 +144,8 @@ def export(sec, ref, panel, ns, args):
     cov = pd.DataFrame({"section": sec, "gene": panel,
                         "measured": [int(g in feat) for g in panel],
                         "detected": [int(g in detected) for g in panel]})
-    scale = dict(section=sec, um_per_px_visium=umpp, um_per_px_pitch=umpp_nb,
-                 mismatch_pct=100 * mism, um_per_px_her2st=ref["um_per_px_ref"], f=fct,
+    scale = dict(section=sec, um_per_px_visium=umpp, hex_skew_pct=sc["hex_skew_pct"],
+                 implied_spot_diam_um=sc["implied_spot_diam_um"], um_per_px_her2st=ref["um_per_px_ref"], f=fct,
                  img_in=f"{W}x{H}", img_out=f"{newW}x{newH}", n_spots=len(spot),
                  n_dropped_zero_umi=n_drop0, max_int_pos=mx, n_dup_symbols=n_dup,
                  panel_measured=int(cov.measured.sum()), panel_detected=int(cov.detected.sum()),
@@ -165,7 +164,7 @@ def upsert(path, df, key="section"):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("sections", nargs="*", default=K.VISIUM_SECTIONS)
-    ap.add_argument("--force", action="store_true", help="ignore the 3% scale cross-check")
+    ap.add_argument("--force", action="store_true", help="ignore the scale sanity checks")
     ap.add_argument("--allow_overflow", action="store_true", help="allow integer positions >= 64")
     a = ap.parse_args()
     K.CALIB.mkdir(parents=True, exist_ok=True)

@@ -109,12 +109,28 @@ def read_10x_h5(path: Path):
     return X, barcodes, names, ids
 
 
-def neighbour_distance_px(pos: pd.DataFrame) -> float:
-    """Median full-res pixel distance between (row, col) and (row, col+2): 100 um apart."""
+def neighbour_distance_px(pos: pd.DataFrame, step=(0, 2)) -> float:
+    """Median full-res pixel distance between (row, col) and (row+dr, col+dc).
+    Every hex neighbour is VISIUM_PITCH_UM = 100 um away: step (0, 2) is the same-row
+    neighbour, (1, 1) the diagonal one."""
+    dr, dc = step
     key = {(r, c): (y, x) for r, c, y, x in pos[["array_row", "array_col", "pxl_row", "pxl_col"]].values}
     d = [np.hypot(y2 - y1, x2 - x1) for (r, c), (y1, x1) in key.items()
-         if (r, c + 2) in key for (y2, x2) in [key[(r, c + 2)]]]
+         if (r + dr, c + dc) in key for (y2, x2) in [key[(r + dr, c + dc)]]]
     return float(np.median(d))
+
+
+def visium_scale(pos: pd.DataFrame, sf: dict) -> dict:
+    """um/px from the 100-um spot pitch (primary).  Two sanity checks:
+    * row vs diagonal neighbour distance agree within 2 % (regular hex grid, no skew)
+    * implied spot_diameter_fullres in um lies in 60-70 um -- 10x defines that field as a
+      VISUALISATION diameter of 60-70 um depending on slide design, NOT the physical 55 um."""
+    row_px = neighbour_distance_px(pos, (0, 2))
+    diag_px = neighbour_distance_px(pos, (1, 1))
+    umpp = VISIUM_PITCH_UM / row_px
+    return dict(um_per_px=umpp, row_px=row_px, diag_px=diag_px,
+                hex_skew_pct=100 * abs(row_px - diag_px) / row_px,
+                implied_spot_diam_um=sf["spot_diameter_fullres"] * umpp)
 
 
 # ------------------------------------------------------------ her2st-like ----

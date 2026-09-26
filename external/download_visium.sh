@@ -27,7 +27,7 @@ while IFS=$'\t' read -r sec stem img; do
     f="$sec/$(basename "$stem$suf")"
     [ -s "$f" ] || curl -fL --retry 3 -o "$f" "$B/$stem$suf"
   done
-  tar -xzf "$sec"/*_spatial.tar.gz -C "$sec"
+  tar --no-same-owner -xzf "$sec"/*_spatial.tar.gz -C "$sec"
 done < urls.tsv
 sha256sum */*.h5 */*.tif */*.tar.gz > MANIFEST.sha256
 du -sh */

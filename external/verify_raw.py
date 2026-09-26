@@ -33,9 +33,7 @@ def main():
         X, bc, names, ids = K.read_10x_h5(f["h5"])
         H, W = image_shape(f["image"])[:2]
         tis = pos[pos.in_tissue == 1]
-        umpp = K.VISIUM_SPOT_UM / sf["spot_diameter_fullres"]
-        nb_px = K.neighbour_distance_px(tis)
-        umpp_nb = K.VISIUM_PITCH_UM / nb_px
+        sc = K.visium_scale(tis, sf)
         inside = (tis.pxl_row.max() < H) and (tis.pxl_col.max() < W) and (tis[["pxl_row", "pxl_col"]].min().min() >= 0)
         panel = K.load_panel()
         nm = set(names)
@@ -45,8 +43,9 @@ def main():
             genes=len(names), ids_are_ensg=all(i.startswith("ENSG") for i in ids[:50]),
             panel_genes_in_features=sum(g in nm for g in panel),
             spot_diameter_fullres=round(sf["spot_diameter_fullres"], 3),
-            um_per_px_from_spot=round(umpp, 4), um_per_px_from_pitch=round(umpp_nb, 4),
-            scale_mismatch_pct=round(100 * abs(umpp - umpp_nb) / umpp_nb, 2),
+            um_per_px=round(sc["um_per_px"], 4),
+            hex_skew_pct=round(sc["hex_skew_pct"], 2),
+            implied_spot_diam_um=round(sc["implied_spot_diam_um"], 2),
             spots_inside_image=bool(inside),
             median_umi=float(np.median(np.asarray(X.sum(1)).ravel()))))
     df = pd.DataFrame(rows)
@@ -54,7 +53,7 @@ def main():
     df.to_csv(K.CALIB / "raw_summary.tsv", sep="\t", index=False)
     with pd.option_context("display.width", 250, "display.max_columns", 50):
         print(df.T.to_string())
-    bad = df[(df.scale_mismatch_pct > 3) | (~df.spots_inside_image)]
+    bad = df[(df.hex_skew_pct > 2) | (~df.implied_spot_diam_um.between(60, 70)) | (~df.spots_inside_image)]
     if len(bad):
         print("\nFAIL:", list(bad.section), "-- wrong image or scalefactors; fix Stage 1 before Stage 2")
         sys.exit(1)
