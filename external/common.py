@@ -223,3 +223,34 @@ def write_preds(out_dir: Path, sec: str, *, pred, truth, spot_ids, genes, trainm
     np.savez_compressed(out / f"{sec}.npz", **payload)
     if extra:
         (Path(out_dir) / "run.json").write_text(json.dumps(extra, indent=2, default=str))
+
+
+# ------------------------------------------------------------ round-trip ----
+def per_gene_pcc(a, b):
+    a = np.asarray(a, np.float64); b = np.asarray(b, np.float64)
+    a = a - a.mean(0); b = b - b.mean(0)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        return (a * b).sum(0) / np.sqrt((a ** 2).sum(0) * (b ** 2).sum(0))
+
+
+def roundtrip_row(model, fold, sec, pred, truth, pred_stored, truth_stored, **extra):
+    return dict(model=model, fold=fold, section=sec,
+                max_abs_pred_diff=float(np.abs(np.asarray(pred) - np.asarray(pred_stored)).max()),
+                max_abs_truth_diff=float(np.abs(np.asarray(truth) - np.asarray(truth_stored)).max()),
+                pcc_stored=round(float(np.nanmean(per_gene_pcc(pred_stored, truth_stored))), 4),
+                pcc_new=round(float(np.nanmean(per_gene_pcc(pred, truth))), 4), **extra)
+
+
+def record_roundtrip(model, rows, tol):
+    """Upsert this model's rows into ext/roundtrip.tsv and print PASS/FAIL."""
+    if not rows:
+        return
+    cur = pd.DataFrame(rows)
+    p = EXT / "roundtrip.tsv"
+    df = cur
+    if p.exists():
+        old = pd.read_csv(p, sep="\t")
+        df = pd.concat([old[~((old.model == model) & old.fold.isin(cur.fold))], cur])
+    df.to_csv(p, sep="\t", index=False)
+    bad = cur[(cur.pcc_new - cur.pcc_stored).abs() > tol]
+    print("ROUNDTRIP", "FAIL" if len(bad) else "PASS", f"({len(bad)} sections off by >{tol:g})", flush=True)
