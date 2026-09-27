@@ -78,6 +78,9 @@ def main():
     ap.add_argument("--out", default="/workspace/runs/ext_stflow")
     ap.add_argument("--skip_roundtrip", action="store_true")
     ap.add_argument("--rt_tol", type=float, default=2e-3)
+    ap.add_argument("--seed_check", type=int, default=3,
+                    help="extra held-out predictions with eval_seed+1..+n: the PCC spread across "
+                         "prior draws is the noise floor the round-trip difference is judged against")
     a0 = ap.parse_args()
     device = "cuda" if torch.cuda.is_available() else "cpu"
     panel = K.load_panel()
@@ -132,14 +135,18 @@ def main():
         if not a0.skip_roundtrip:
             secs = [data[s] for s in test_s]
             preds = T.predict(model, interp, secs, genes, a, a.eval_seed)
-            for d, pred in zip(secs, preds):
+            alt = [T.predict(model, interp, secs, genes, a, a.eval_seed + j + 1) for j in range(a0.seed_check)]
+            for i_s, (d, pred) in enumerate(zip(secs, preds)):
                 s = d["section"]
                 K.write_preds(out_dir, s, pred=pred[:, perm], truth=d["labels"][:, perm],
                               spot_ids=list(d["spot_id"]), genes=panel, trainmean=trainmean,
                               model="stflow", fold=k, extra=extra)
                 st = np.load(os.path.join(src, "preds", f"{s}.npz"), allow_pickle=True)
                 assert [str(x) for x in st["spot_id"]] == [str(x) for x in d["spot_id"]]
-                rt.append(K.roundtrip_row("stflow", P, s, pred, d["labels"], st["pred"], st["truth"]))
+                seed_pcc = [float(np.nanmean(K.per_gene_pcc(p[i_s], d["labels"]))) for p in alt]
+                rt.append(K.roundtrip_row("stflow", P, s, pred, d["labels"], st["pred"], st["truth"],
+                                          seed_pcc_sd=round(float(np.std(seed_pcc + [float(np.nanmean(K.per_gene_pcc(pred, d["labels"])))], ddof=1)), 4) if seed_pcc else np.nan,
+                                          seed_pcc_range=round(float(np.ptp(seed_pcc + [float(np.nanmean(K.per_gene_pcc(pred, d["labels"])))])), 4) if seed_pcc else np.nan))
                 print("  roundtrip", rt[-1], flush=True)
 
         for sec, d in vis.items():
@@ -151,6 +158,16 @@ def main():
         print(f"fold {P}: done in {time.time()-t0:.0f}s", flush=True)
         del model; torch.cuda.empty_cache()
     K.record_roundtrip("stflow", rt, a0.rt_tol)
+    if rt and a0.seed_check:
+        import pandas as pd
+        cur = pd.DataFrame(rt)
+        cur["abs_diff"] = (cur.pcc_new - cur.pcc_stored).abs()
+        within = (cur.abs_diff <= cur.seed_pcc_range).all()
+        print(cur[["fold", "section", "pcc_stored", "pcc_new", "abs_diff", "seed_pcc_sd", "seed_pcc_range"]]
+              .to_string(index=False))
+        print("SEED CHECK:", "every |stored - new| is within the spread of PCC across prior draws "
+              "-> difference is sampling noise, not wiring" if within else
+              "some |stored - new| exceed the across-draw spread -> tell Claude", flush=True)
 
 
 if __name__ == "__main__":
