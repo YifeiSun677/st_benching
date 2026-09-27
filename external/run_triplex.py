@@ -78,6 +78,30 @@ def pin_grid(model, positions_by_section):
     return grid, dict(grids)
 
 
+def set_grid(model, grid):
+    for m in apeg_modules(model):
+        m.grid_size = tuple(grid)
+
+
+def scan_grid(model, te, sec, stored, device, max_side=5):
+    """Recover the APEG grid the trained model actually cached: try every (W, H) up to
+    max_side on one held-out section and keep the one that reproduces the stored
+    predictions.  The stored preds were made in the training process, with the grid set
+    on the first training forward -- which the checkpoint does not record."""
+    b = te.section_batch(sec, device=device)
+    rows = []
+    for W in range(1, max_side + 1):
+        for H in range(1, max_side + 1):
+            set_grid(model, (W, H))
+            with torch.no_grad():
+                p = model(img=b["img"], mask=b["mask"], neighbor_emb=b["neighbor_emb"],
+                          position=b["position"], global_emb=b["global_emb"])["logits"].float().cpu().numpy()
+            rows.append(((W, H), float(np.abs(p - stored).max())))
+    del b; torch.cuda.empty_cache()
+    rows.sort(key=lambda r: r[1])
+    return rows[0][0], rows
+
+
 def visium_inputs(sec, panel_cache, device):
     """Patches, CIGAR global features, neighbour tensor, positions, truth -- built once."""
     FEAT_EXT.mkdir(parents=True, exist_ok=True)
@@ -134,6 +158,9 @@ def main():
     ap.add_argument("--out", default="/workspace/runs/ext_triplex")
     ap.add_argument("--skip_roundtrip", action="store_true")
     ap.add_argument("--rt_tol", type=float, default=1e-3)
+    ap.add_argument("--grid", default="scan",
+                    help="'scan' (recover per fold from stored preds; default), 'modal' "
+                         "(most common over training sections), or 'W,H'")
     a = ap.parse_args()
     device = "cuda" if torch.cuda.is_available() else "cpu"
     os.chdir(str(K.ST_BENCH))                  # upstream init looks for ./weights/cigar (run.sh)
@@ -157,14 +184,34 @@ def main():
         t0 = time.time()
         model, meta = load_fold(TAG, P, device=device)
         tr = {s: _load_section(s, panel_cache) for s in fd["train"]}
-        grid, spread = pin_grid(model, [tr[s]["coords"] for s in fd["train"]])
+        modal, spread = pin_grid(model, [tr[s]["coords"] for s in fd["train"]])
+        scan_note = None
+        if a.grid == "scan":
+            te0 = TriTestSections(fd["test"][:1], panel_cache)
+            st0 = np.load(os.path.join(TC.OUTPUT_DIR, TAG, f"fold_{P}", "preds", f"{fd['test'][0]}.npz"),
+                          allow_pickle=True)["pred"]
+            grid, rows = scan_grid(model, te0, fd["test"][0], st0, device)
+            scan_note = ", ".join(f"{g}:{d:.2g}" for g, d in rows[:4])
+            print(f"  [{P}] grid scan on {fd['test'][0]} (grid: max|pred - stored|, best first): {scan_note}",
+                  flush=True)
+            if rows[0][1] > 1e-2:
+                print(f"  [{P}] WARNING: no grid reproduces the stored predictions (best {rows[0][1]:.3g}) "
+                      "-> the difference is not the APEG grid; tell Claude", flush=True)
+            del te0
+        elif a.grid == "modal":
+            grid = modal
+        else:
+            grid = tuple(int(v) for v in a.grid.split(","))
+        set_grid(model, grid)
         trainmean = np.concatenate([tr[s]["expr"] for s in fd["train"]]).mean(0)[perm]
         out_dir = os.path.join(a.out, f"fold0{k}_{P}")
         extra = dict(ckpt=os.path.join(TC.CKPT_DIR, TAG, f"fold_{P}", "final.pt"),
-                     apeg_grid=grid, apeg_grid_by_train_section=str(spread),
+                     apeg_grid=grid, apeg_grid_rule=a.grid, apeg_grid_modal=modal,
+                     apeg_grid_by_train_section=str(spread), apeg_grid_scan=scan_note,
                      neighbours="Visium: nearest spot within 50 um of each 200-um offset",
                      train=fd["train"], test=fd["test"], visium=list(a.sections))
-        print(f"  [{P}] APEG grid pinned to {grid}; per training section: {spread}", flush=True)
+        print(f"  [{P}] APEG grid used {grid} (rule {a.grid}); modal over training sections {modal}; "
+              f"per training section: {spread}", flush=True)
 
         if not a.skip_roundtrip:
             te = TriTestSections(fd["test"], panel_cache)
