@@ -27,6 +27,7 @@ import gzip
 import importlib.util
 import json
 import os
+import pickle
 import re
 from pathlib import Path
 
@@ -119,10 +120,29 @@ def fit_scale(sp: pd.DataFrame) -> dict:
 
 
 # ------------------------------------------------------------ gene symbols ----
+class _IdentityDict(dict):
+    """Stand-in for stnet.utils.ensembl.IdentityDict: unknown keys map to themselves."""
+    def __missing__(self, key):
+        return key
+
+
+class _StnetUnpickler(pickle.Unpickler):
+    def find_class(self, module, name):
+        if name == "IdentityDict":
+            return _IdentityDict
+        return super().find_class(module, name)
+
+
 def ensembl_symbols(stnet_root: str | None = None) -> dict:
     """ENSG -> symbol with ST-Net's own table (so He symbols match what the ST-Net run used).
-    Loads stnet/utils/ensembl.py by file path: no openslide import needed."""
+    ensembl.pkl pickles stnet's IdentityDict, so it is unpickled with a local stand-in class
+    (no stnet / openslide import); without the pkl, stnet/utils/ensembl.py builds it from the tsv."""
     root = Path(stnet_root or os.environ.get("STNET", "/workspace/ST-Net"))
+    pkl = root / "stnet" / "utils" / "ensembl.pkl"
+    if pkl.exists():
+        with open(pkl, "rb") as f:
+            sym = _StnetUnpickler(f).load()
+        return sym if isinstance(sym, _IdentityDict) else _IdentityDict(sym)
     spec = importlib.util.spec_from_file_location("stnet_ensembl", root / "stnet" / "utils" / "ensembl.py")
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
