@@ -247,3 +247,110 @@ With no `--models`, it scores every `runs/he_*` directory into one set of tables
 (IGHA1 IGHG3 IGHG4 IGHM IGKC IGLC2 IGLC3 IGLC7 TRAC) are high in immune-rich her2st spots but zero in He,
 so He spot totals are slightly smaller and every other gene's CPM slightly larger. The effect is a mild
 per-spot rescaling, applied by BLEEP's own transform. It is kept, not corrected, so the target stays BLEEP's.
+
+---
+
+# Part C — HisToGene transfer
+
+Driver: `run_histogene_he.py`. It reuses `run_histogene.py` (the Visium driver) and the **main-table port**:
+the `histogene/` package modules `cache.py`, `config.py`, `her2st.py` and `dataset.py`, with weights from
+`runs/histogene_lopo_833_ckpt`. The "Re-organize files" commit had deleted those four modules; they were
+restored unchanged from `92ded7e`. The newer `dataset_fast.py` / `train_lopo.py` port is a different run.
+
+- **Input:** a whole He section per forward pass, 112-px crops of the her2st-scale JPEG.
+- **Positions:** He array `x, y`, which are 200-µm units like her2st, so no `x_int` is needed.
+- **Truth:** log10(CP10K + 1) over the panel (`histogene.her2st.expression`).
+
+## C.0 Preflight
+
+```bash
+cd /workspace && for k in 0 1 2 3 4 5 6 7; do ls -d runs/histogene_lopo_833_ckpt/fold0${k}_* >/dev/null || echo "MISSING fold $k"; done; ls runs/histogene_lopo_833_ckpt/fold00_A/; ls -d /workspace/HisToGene /workspace/cache/htg_patch112
+```
+
+```bash
+cd /workspace/st_benching && python -c "import sys; sys.path.insert(0,'external'); import run_histogene; print('histogene ok')"
+```
+
+Each fold dir must hold `last.ckpt` and `preds/`.
+
+## C.1 her2st held-out + round-trip
+
+```bash
+python external/run_histogene.py --sections --out /workspace/runs/he_histogene 2>&1 | tee /workspace/runs/he_histogene_c1.log
+```
+
+**Check:** `ROUNDTRIP PASS`. Same weights, so expect an exact match (`--rt_tol 1e-4`).
+
+## C.2 Smoke test, then the full run
+
+```bash
+python external/run_histogene_he.py --folds B --sections BC23287_C1 --out /workspace/runs/he_histogene_smoke
+```
+
+```bash
+rm -rf /workspace/runs/he_histogene_smoke && python external/run_histogene_he.py --out /workspace/runs/he_histogene 2>&1 | tee /workspace/runs/he_histogene/predict.log
+```
+
+All 68 sections are cropped once (about 1.5 GB RAM), then each fold loads one model and predicts every section.
+
+---
+
+# Part D — Path2Space transfer
+
+Driver: `run_path2space_he.py`. It reuses `run_path2space.py` (the Visium driver: Macenko pool helpers)
+and the `path2space/` port:
+
+- **Features:** frozen CTransPath on 224-px tiles, per-tile Macenko.
+- **Ensemble:** 7 ik × 7 il MLPs per fold from `/workspace/p2s_ckpt/path2space_lopo_833_ckpt/fold_P`.
+- **Truth:** the `lognorm` target (panel library × section median, log1p).
+- **Footing:** RAW, with no smoothing.
+
+## D.0 Preflight
+
+```bash
+ls /workspace/p2s_ckpt/path2space_lopo_833_ckpt/fold_A/ /workspace/p2s_weights/ctranspath.pth /workspace/p2s_upstream/ge_model/path2space >/dev/null && echo ok; pip install -q spams-bin opencv-python-headless
+```
+
+```bash
+cd /workspace/st_benching && python -c "import sys; sys.path.insert(0,'external'); import run_path2space; print('p2s ok')"
+```
+
+## D.1 her2st held-out + round-trip
+
+```bash
+python external/run_path2space.py --sections --out /workspace/runs/he_path2space 2>&1 | tee /workspace/runs/he_path2space_d1.log
+```
+
+**Check:** `ROUNDTRIP PASS`. It reads the her2st feature cache, so no Macenko runs here.
+
+## D.2 He features (CPU Macenko, then GPU CTransPath; cached and resumable)
+
+```bash
+python external/run_path2space_he.py --features_only --workers 48 2>&1 | tee /workspace/runs/he_path2space_features.log
+```
+
+Macenko is the slow part: about 27k tiles in total. `--workers` can go well above the default 16 on this 128-core pod.
+Tiles go to `ext/he/features/path2space/tiles_<SEC>.npz`, then become `<SEC>.npz` features.
+If the run stops, rerunning continues where it left off.
+
+## D.3 Predict
+
+```bash
+python external/run_path2space_he.py --out /workspace/runs/he_path2space 2>&1 | tee /workspace/runs/he_path2space/predict.log
+```
+
+Features are cached, so this takes seconds per fold (only MLPs).
+
+---
+
+# Scoring all models together
+
+```bash
+python external/score_he.py
+```
+
+This scores every `runs/he_*` directory into `results/he/`, with ST-Net, BLEEP, HisToGene and Path2Space side by side.
+Each model is paired only with its **own** her2st held-out (its C.1/D.1-style step), so every delta stays within one model.
+
+**Target spaces differ by model:** ST-Net log((1+c)/(n+Z)), BLEEP CPM-log1p, HisToGene log10(CP10K+1),
+Path2Space median-lognorm. PCC and the paired delta are compared across models; absolute SSE is not.
