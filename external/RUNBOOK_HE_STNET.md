@@ -343,14 +343,110 @@ Features are cached, so this takes seconds per fold (only MLPs).
 
 ---
 
+# Part E — DeepPT transfer
+
+Driver: `run_deeppt_he.py`. It reuses `run_deeppt.py` (the Visium driver) and the `deeppt/` port:
+
+- **Encoder:** frozen ResNet50 features on 224-px crops.
+- **Checkpoints:** `<P>_ae.pt` and the MLP.
+- **Truth:** log10(CP10K + 1), with the library size over **all** detected genes.
+
+`run_deeppt.py` and `deeppt_resave_last.py` now look in `deeppt/` first (the reorg renamed it from `deeppt_her2st/`).
+
+**Epoch rule — decide once, use everywhere.** `<P>_mlp.pt` is the best-validation epoch (the default, `--mlp best`).
+Use whatever the Visium arm used. Check it with:
+
+```bash
+grep -h epoch_rule /workspace/runs/ext_deeppt/fold0*/run.json | sort | uniq -c
+```
+
+If it says `last`, pass `--run /workspace/deeppt/results/deeppt_833_raw_lastckpt --mlp last` to **both** E.1 and E.2.
+
+## E.0 Preflight
+
+```bash
+ls /workspace/deeppt/results/deeppt_833_raw/ckpt/ /workspace/deeppt/features_raw | head; ls /workspace/deeppt/targets/genes.txt /workspace/DeepPT_original/ResNet50_IMAGENET1K_V2.pt
+```
+
+```bash
+cd /workspace/st_benching && python -c "import sys; sys.path.insert(0,'external'); import run_deeppt; print('deeppt ok', run_deeppt.DP)"
+```
+
+## E.1 her2st held-out + round-trip
+
+```bash
+python external/run_deeppt.py --sections --out /workspace/runs/he_deeppt 2>&1 | tee /workspace/runs/he_deeppt_e1.log
+```
+
+**Check:** `ROUNDTRIP PASS`.
+
+## E.2 He features, then predict
+
+```bash
+python external/run_deeppt_he.py --out /workspace/runs/he_deeppt 2>&1 | tee /workspace/runs/he_deeppt/predict.log
+```
+
+The first run encodes each He section once, caching to `ext/he/features/deeppt/<SEC>.npz`. That's about 27k crops through ResNet50, a few minutes on the GPU.
+After that, every fold is only AE + MLP and takes seconds.
+
+---
+
+# Part F — Hist2ST transfer
+
+Driver: `run_hist2st_he.py`. It reuses `run_hist2st.py` (the Visium driver) and the `hist2st/` port.
+The model is rebuilt from each fold's `run.json`, with weights from `<fold>/model.pt`.
+
+- **Input:** a whole He section per forward pass, 112-px crops.
+- **Positions and graph:** He array `x, y`, which are 200-µm integers exactly as in her2st. The graph is
+  `calcADJ` on array coordinates with the run's k and Grid pruning, the same as her2st. A local test gave a mean degree of 4.0.
+  The Visium `x_eq` workaround is not needed.
+- **Truth:** median-library log10 (`HIST2ST_NORM=median`, which must match the run).
+
+## F.0 Preflight
+
+```bash
+ls /workspace/runs/hist2st_lopo_833/fold01_B/ && echo "HIST2ST_NORM=${HIST2ST_NORM:-median (default)}"
+```
+
+```bash
+cd /workspace/st_benching && python -c "import sys; sys.path.insert(0,'external'); import run_hist2st; print('hist2st ok', run_hist2st.HC.HIST2ST_REPO)"
+```
+
+Each fold dir needs `run.json`, `model.pt` and `preds/`.
+
+## F.1 her2st held-out + round-trip
+
+```bash
+python external/run_hist2st.py --sections --out /workspace/runs/he_hist2st 2>&1 | tee /workspace/runs/he_hist2st_f1.log
+```
+
+**Check:** `ROUNDTRIP PASS`.
+
+## F.2 Smoke test, then the full run
+
+```bash
+python external/run_hist2st_he.py --folds B --sections BC23287_C1 --out /workspace/runs/he_hist2st_smoke
+```
+
+The first lines must show graph mean degree ≈ 4 and a finite PCC. Then:
+
+```bash
+rm -rf /workspace/runs/he_hist2st_smoke && python external/run_hist2st_he.py --out /workspace/runs/he_hist2st 2>&1 | tee /workspace/runs/he_hist2st/predict.log
+```
+
+For the ep1000 sensitivity run, pass `--run /workspace/runs/<ep1000 run dir> --out /workspace/runs/he_hist2st_ep1000`
+here **and** in F.1. The scorer then shows it as a separate model, `hist2st_ep1000`.
+
+---
+
 # Scoring all models together
 
 ```bash
 python external/score_he.py
 ```
 
-This scores every `runs/he_*` directory into `results/he/`, with ST-Net, BLEEP, HisToGene and Path2Space side by side.
+This scores every `runs/he_*` directory into `results/he/`, with ST-Net, BLEEP, HisToGene, Path2Space, DeepPT and Hist2ST side by side.
 Each model is paired only with its **own** her2st held-out (its C.1/D.1-style step), so every delta stays within one model.
 
 **Target spaces differ by model:** ST-Net log((1+c)/(n+Z)), BLEEP CPM-log1p, HisToGene log10(CP10K+1),
-Path2Space median-lognorm. PCC and the paired delta are compared across models; absolute SSE is not.
+Path2Space median-lognorm, DeepPT log10(CP10K+1) over all genes, Hist2ST median-library log10. PCC and the paired delta are compared across models; absolute SSE is not.

@@ -22,7 +22,9 @@ import sys
 import numpy as np
 import pandas as pd
 
-SRC_DIR = "/workspace/st_benching/deeppt_her2st"
+SRC_DIR = "/workspace/st_benching/deeppt"            # renamed from deeppt_her2st/ in c418bd2
+if not os.path.exists(os.path.join(SRC_DIR, "03_run_lopo.py")):
+    SRC_DIR = "/workspace/st_benching/deeppt_her2st"
 ORIG = "/workspace/deeppt/results/deeppt_833_raw"
 
 

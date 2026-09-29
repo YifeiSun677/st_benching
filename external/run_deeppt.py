@@ -35,7 +35,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import common as K  # noqa: E402
 
-DP = str(K.ST_BENCH / "deeppt_her2st")
+DP = str(K.ST_BENCH / "deeppt")                       # renamed from deeppt_her2st/ in c418bd2
+if not os.path.exists(os.path.join(DP, "her2st_io.py")):
+    DP = str(K.ST_BENCH / "deeppt_her2st")
 sys.path.insert(0, DP)
 import her2st_io as io  # noqa: E402
 from deeppt_models import AE, Predictor  # noqa: E402
