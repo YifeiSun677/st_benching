@@ -8,7 +8,9 @@ fold's own run.json "config", weights <fold>/model.pt.
              permute(0, 3, 2, 1); /255 if the run used scale255
   positions  He array x, y -- legacy-ST 200-um integer units, exactly as her2st (< n_pos 64)
   graph      calcADJ on the SAME array x, y with the run's k and Grid pruning -- identical to
-             her2st (He is the same platform; the Visium x_eq workaround is not needed)
+             her2st (He is the same platform; the Visium x_eq workaround is not needed).
+             Spots with NO neighbour inside the pruning radius get a self-loop (else 0/0 NaN that
+             the transformer spreads to the whole section); counts are printed and stored in run.json
   rows       load_section order: spot ids shared by counts and spot file, sorted
   truth      load_section rule: panel counts, lib over the panel, x MEDIAN lib of the section,
              log10(+1)  (HIST2ST_NORM must be the value the run used: median)
@@ -58,8 +60,16 @@ def he_item(sec, panel, cfg):
     if arr.max() >= 64 or arr.min() < 0:
         raise SystemExit(f"{sec}: array position outside [0, 64)")
     adj = calcADJ(arr, cfg["neighbor"], pruneTag=cfg["prune"]).float()
+    # A spot with no neighbour inside the Grid-pruning radius has an all-zero adjacency row; the
+    # graph layer's neighbour mean is then 0/0 = NaN, and the transformer spreads it to EVERY spot
+    # of the section (seen on BC23377_C1: 1 isolated spot -> 597/597 NaN rows).  her2st training
+    # sections cannot have had one (the NaN would have poisoned training).  Minimal fix: a
+    # self-loop on isolated spots only; every other row of the graph is unchanged.
+    iso = np.where(adj.sum(1).numpy() == 0)[0]
+    if len(iso):
+        adj[iso, iso] = 1.0
     return dict(patches=patches, pos=torch.from_numpy(arr), adj=adj, truth=R.target(ori),
-                ids=ids, degree=float(adj.sum(1).mean()))
+                ids=ids, degree=float(adj.sum(1).mean()), n_isolated=len(iso))
 
 
 def main():
@@ -85,8 +95,10 @@ def main():
     t0 = time.time()
     items = {s: he_item(s, panel, cfg) for s in secs}      # graph uses the run-wide k / prune
     deg = [v["degree"] for v in items.values()]
+    iso = {s: v["n_isolated"] for s, v in items.items() if v["n_isolated"]}
     print(f"built {len(items)} He sections in {time.time() - t0:.0f}s; graph mean degree "
-          f"{np.mean(deg):.2f} [{np.min(deg):.2f}, {np.max(deg):.2f}]", flush=True)
+          f"{np.mean(deg):.2f} [{np.min(deg):.2f}, {np.max(deg):.2f}]; isolated spots given a self-loop: "
+          f"{iso or 'none'}", flush=True)
 
     folds = K.lopo_folds()
     if a.folds != "all":
@@ -104,7 +116,8 @@ def main():
         model.eval()
         trainmean = np.concatenate([load_section(s, panel)["exp"] for s in fd["train"]]).mean(0)
         extra = dict(ckpt=os.path.join(rdir, "model.pt"), config=cfg_k, norm=HC.NORM, cohort="he",
-                     positions="He array x/y", graph="calcADJ on array x/y, same k and Grid prune",
+                     positions="He array x/y", graph="calcADJ on array x/y, same k and Grid prune; "
+                     "self-loop on isolated spots (degree 0) only", isolated_spots=iso,
                      train=fd["train"])
         out_dir = os.path.join(out_root, f"fold0{k}_{P}")
         if device == "cuda":
