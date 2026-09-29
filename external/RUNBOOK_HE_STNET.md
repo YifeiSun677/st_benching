@@ -87,8 +87,11 @@ python external/verify_he_raw.py
 ## 2. Resample to her2st scale and export
 
 ```bash
-python external/export_he_like.py
+nohup python external/export_he_like.py --jobs 8 > /workspace/ext/he/calib/export.log 2>&1 &
 ```
+
+CPU-only. `--jobs N` exports N sections in parallel (about 1–1.5 GB RAM each). Pick N at most `nproc`, and at most free RAM / 1.5 GB.
+The summary tables are written once at the end, so never launch several copies of the script instead.
 
 Per section, this:
 

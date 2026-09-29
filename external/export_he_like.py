@@ -50,7 +50,7 @@ def export(sec, ref, symbol, a):
 
     sc = H.fit_scale(sp)
     if (sc["xy_diff_pct"] > 3 or sc["rmse_frac_pitch"] > 0.10) and not a.force:
-        raise SystemExit(f"{sec}: spot grid fit failed {sc} -- run verify_he_raw.py")
+        raise RuntimeError(f"{sec}: spot grid fit failed {sc} -- run verify_he_raw.py")
     f = sc["um_per_px"] / ref["um_per_px_ref"]
 
     n0 = len(sp)
@@ -134,6 +134,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("sections", nargs="*")
     ap.add_argument("--force", action="store_true", help="ignore the grid-fit sanity check")
+    ap.add_argument("--jobs", type=int, default=1,
+                    help="sections exported in parallel (CPU; ~1-1.5 GB RAM each). Summary tables are "
+                         "written once by the parent, so parallel jobs never race on them")
     a = ap.parse_args()
     secs = a.sections or H.he_sections()
     H.HE_CALIB.mkdir(parents=True, exist_ok=True)
@@ -156,8 +159,13 @@ def main():
     print(f"her2st ref {ref['um_per_px_ref']:.4f} um/px ({ref['px_per_unit_ref']:.2f} px per 200 um)")
 
     rows, detected = [], {}
-    for sec in secs:
-        row, feats, det = export(sec, ref, symbol, a)
+    if a.jobs > 1:
+        from multiprocessing import Pool
+        with Pool(a.jobs) as pool:
+            res = pool.starmap(export, [(sec, ref, symbol, a) for sec in secs], chunksize=1)
+    else:
+        res = [export(sec, ref, symbol, a) for sec in secs]
+    for sec, (row, feats, det) in zip(secs, res):
         rows.append(row)
         detected[sec] = det
     upsert(H.HE_CALIB / "he_scale.tsv", pd.DataFrame(rows))
