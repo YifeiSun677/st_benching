@@ -185,3 +185,65 @@ mkdir -p results/he_stnet && scp -r <pod>:/workspace/results/he/* results/he_stn
 - The her2st-like tree (`ext/he/her2st_like/data`) is ready for the other ports (HisToGene, Hist2ST, …):
   counts are symbols and images are at her2st scale. Section ids are longer than her2st's 2-char ids,
   so each port's driver has to take the section list explicitly.
+
+---
+
+# Part B — BLEEP transfer (same He export, steps 1–2 are shared)
+
+Driver: `run_bleep_he.py`. It reuses `run_bleep.py` (the Visium driver) and the port in `bleep/` unchanged:
+
+- **Checkpoints:** `/workspace/runs/bleep_lopo_e10/<P>/last.pt`.
+- **Reference bank:** the fold's 7 training patients from `/workspace/her2st_cache`, encoded by the expression encoder.
+- **Prediction:** the mean of the top-50 retrieved reference spots.
+- **Truth:** BLEEP's own target (panel counts → CPM → log1p), computed from `ext/he/her2st_like/data/ST-cnts`.
+
+The only override is `her2st_dataset.find_image`, which otherwise assumes `ST-imgs/<SEC[0]>/<SEC>/`.
+
+## B.0 Preflight
+
+```bash
+cd /workspace && for P in A B C D E F G H; do ls runs/bleep_lopo_e10/$P/last.pt runs/bleep_lopo_e10/$P/preds.npz >/dev/null || echo "MISSING $P"; done; ls her2st_cache/index.json her2st_cache/patches.npy
+```
+
+```bash
+cd /workspace/st_benching && python -c "import sys; sys.path[:0]=['external','bleep']; import run_bleep; print('bleep ok')"
+```
+
+If the import fails, install from `bleep/requirements_bleep.txt`.
+
+## B.1 her2st held-out predictions in the same run tree (paired baseline + round-trip)
+
+```bash
+python external/run_bleep.py --sections --out /workspace/runs/he_bleep 2>&1 | tee /workspace/runs/he_bleep_b1.log
+```
+
+**Check:** `ROUNDTRIP PASS`. Retrieval is discrete, so small |ΔPCC| (≤ 1e-3) is expected; see `run_bleep.py --rt_tol`.
+
+## B.2 Smoke test, then the full run
+
+```bash
+python external/run_bleep_he.py --folds B --sections BC23287_C1 --out /workspace/runs/he_bleep_smoke
+```
+
+Expect one line with `316`-ish spots, `0 edge-padded`, and a finite, positive PCC. Then:
+
+```bash
+rm -rf /workspace/runs/he_bleep_smoke && python external/run_bleep_he.py --out /workspace/runs/he_bleep 2>&1 | tee /workspace/runs/he_bleep/predict.log
+```
+
+This loads 8 CLIP models and 8 reference banks at once; each He image is loaded once. If GPU memory is tight
+(for example while ST-Net is still running), use `--folds A,B,C,D` and then `--folds E,F,G,H`. The outputs land in the same tree.
+
+## B.3 Score both models together
+
+```bash
+python external/score_he.py
+```
+
+With no `--models`, it scores every `runs/he_*` directory into one set of tables. Running `--models bleep` on its own
+**overwrites** `results/he/*` with only BLEEP, so score both models together (or pass a different `--out`).
+
+**BLEEP-specific caveat.** The CPM denominator is the panel total. The 9 panel genes He never measured
+(IGHA1 IGHG3 IGHG4 IGHM IGKC IGLC2 IGLC3 IGLC7 TRAC) are high in immune-rich her2st spots but zero in He,
+so He spot totals are slightly smaller and every other gene's CPM slightly larger. The effect is a mild
+per-spot rescaling, applied by BLEEP's own transform. It is kept, not corrected, so the target stays BLEEP's.
