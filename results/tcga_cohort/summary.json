@@ -1,0 +1,61 @@
+{
+  "built": "2026-09-29T23:47:52",
+  "seed": 20260929,
+  "strata": {
+    "HER2pos": 40,
+    "LumA": 20,
+    "LumB": 20,
+    "Basal": 20
+  },
+  "n_patients_any_source": 1101,
+  "exclusion_flow": {
+    "eligible": 774,
+    "her2_undetermined": 134,
+    "her2neg_pam50_not_LumA_LumB_Basal": 105,
+    "no_dx_slide": 37,
+    "not_female": 15,
+    "neoadjuvant_yes_or_unknown": 14,
+    "her2_discordant": 11,
+    "no_frozen_slide_same_sample": 8,
+    "no_primary_rna": 3
+  },
+  "eligible_by_stratum": {
+    "LumA": 348,
+    "HER2pos": 170,
+    "Basal": 130,
+    "LumB": 126
+  },
+  "her2pos_pam50": {
+    "LumA": 53,
+    "Her2": 48,
+    "LumB": 37,
+    "NA": 15,
+    "Basal": 13,
+    "Normal": 4
+  },
+  "selected": {
+    "HER2pos": 40,
+    "LumB": 20,
+    "Basal": 20,
+    "LumA": 20
+  },
+  "shortfall": {
+    "HER2pos": 0,
+    "LumA": 0,
+    "LumB": 0,
+    "Basal": 0
+  },
+  "selected_slides": {
+    "DX": 106,
+    "TS": 94,
+    "BS": 52
+  },
+  "selected_slide_gb": 143.9,
+  "main_with_both_TS_and_BS": 41,
+  "patients_with_multiple_rna_files": 0,
+  "sources": {
+    "gdc": "https://api.gdc.cancer.gov/files",
+    "cbio_her2": "brca_tcga",
+    "cbio_pam50": "brca_tcga_pan_can_atlas_2018"
+  }
+}
