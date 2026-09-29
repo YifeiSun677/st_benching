@@ -50,11 +50,14 @@ prefixes are not consistent:
 
 ```bash
 cd /workspace/st_benching && git pull
-pip install -q opencv-python-headless pillow scipy h5py
+pip install -q opencv-python-headless pillow scipy h5py openslide-python openslide-bin
 ```
 
+`openslide` is needed by ST-Net itself (steps 3–4). `openslide-bin` ships the C library as a wheel;
+if pip can't install it, use `apt-get install -y openslide-tools` instead.
+
 ```bash
-cd /workspace && R=ST-Net/output/densenet121_224/top_833; for P in A B C D E F G H; do ls $R/${P}_checkpoints/epoch_25.pt $R/${P}_gene.log $R/${P}_25.npz >/dev/null || echo "MISSING fold $P"; done; ls panels/panel_train.txt ext/calib/her2st_scale.json ST-Net/stnet/utils/ensembl.*
+cd /workspace && R=ST-Net/output/densenet121_224/top_833; for P in A B C D E F G H; do ls $R/${P}_checkpoints/epoch_25.pt $R/${P}_gene.log $R/${P}_25.npz >/dev/null || echo "MISSING fold $P"; done; ls panels/panel_train.txt ext/calib/her2st_scale.json; python -c 'import openslide; print("openslide ok")'
 ```
 
 Nothing should print "MISSING". If `her2st_scale.json` is missing, run `python external/calib_her2st_scale.py`
@@ -94,12 +97,17 @@ Per section, this:
 3. resizes the H&E (INTER_AREA if f < 1, LANCZOS4 if f > 1) and writes JPEG Q95;
 4. scales the spot pixels by f;
 5. keeps spots that have counts and > 0 UMI;
-6. maps ENSG → symbol with **ST-Net's own table** (`stnet/utils/ensembl.py`).
+6. maps ENSG → symbol with the **HGNC** table, choosing the name her2st uses: current symbol, else a previous
+   symbol, else an alias, and only names present in her2st (for example `AES`, now `TLE5`). One table covers all
+   68 sections (`calib/ensg_to_symbol.tsv`). ST-Net's own `ensembl.tsv` on the pod is an empty stub, so ST-Net
+   was trained on her2st symbols directly.
 
 **Checks**
 
 - One JSON line per section. `f` should be nearly constant across sections, `n_dropped` small, `n_edge_spots` ~0 (these crops get black padding).
-- The final line `panel genes present in the He feature universe: N/833` should be close to 833. List the missing genes. They are scored as unmeasured (dropped), not as zeros.
+- The first line `ENSG -> symbol … panel genes reachable N/833` and the last line `panel genes present … N/833`
+  should both read **824/833** or very close. The 9 missing genes are `IGHA1 IGHG3 IGHG4 IGHM IGKC IGLC2 IGLC3 IGLC7 TRAC`,
+  which are absent from He's annotation. They are scored as unmeasured (dropped), not as zeros.
 - **Look at 3–4 `calib/qc/<SEC>.jpg`.** Circles must sit on tissue (red = tumour, blue = non, green = unlabelled), and the black box shows one 224-px window. A local test on BC23287_C1 lined up cleanly.
 - `calib/he_scale.tsv` is the bookkeeping table. Copy it into the results.
 

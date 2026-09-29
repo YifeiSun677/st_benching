@@ -11,16 +11,17 @@ file layout under /workspace/ext/he/her2st_like/data (NOT the her2st tree).
   ST-spotfiles/<SEC>_selection.tsv        x, y (= new_x, new_y; He is already in 200-um array units),
                                           pixel_x, pixel_y (resampled image; x = column), selected,
                                           tumor (1/0/-1 = tumour / non / unlabelled)
-  ST-cnts/<SEC>.tsv.gz                    raw counts, spots x SYMBOL, genes with > 0 counts only
+  ST-cnts/<SEC>.tsv.gz                    raw counts, spots x SYMBOL (her2st naming), > 0 counts only
   calib/counts_<SEC>.npz                  sparse raw counts, all ENSG features, same row order
                                           (genes = symbol, gene_ids = ENSG)
   calib/panel_coverage.tsv                section, gene, measured (symbol in ANY He section), detected
   calib/he_scale.tsv                      scale bookkeeping per section
+  calib/ensg_to_symbol.tsv                ENSG -> her2st symbol (HGNC current / prev / alias), one
+                                          table over ALL He sections so every section is named alike
   calib/qc/<SEC>.jpg                      spot centres + 224-px window drawn on the resampled image
 
 usage: python external/export_he_like.py [SEC ...]      (default: all sections in metadata)
-needs: opencv-python, pillow, scipy;  ST-Net checkout at $STNET (default /workspace/ST-Net) for
-       ST-Net's own ENSG -> symbol table
+needs: opencv-python, pillow, scipy; internet once for the HGNC table (cached in raw/)
 """
 import argparse
 import json
@@ -88,7 +89,7 @@ def export(sec, ref, symbol, a):
 
     # ---- counts -----------------------------------------------------------------------
     ensg = list(cnt.columns)
-    sym = [str(symbol[g]) for g in ensg]
+    sym = [symbol.get(g, g) for g in ensg]
     Xs = sparse.csr_matrix(cnt.values)
     np.savez_compressed(H.HE_CALIB / f"counts_{sec}.npz", data=Xs.data, indices=Xs.indices,
                         indptr=Xs.indptr, shape=Xs.shape, genes=np.array(sym), gene_ids=np.array(ensg),
@@ -140,8 +141,18 @@ def main():
     if not refp.exists():
         raise SystemExit(f"{refp} missing -- run: python external/calib_her2st_scale.py")
     ref = json.loads(refp.read_text())
-    symbol = H.ensembl_symbols()
     panel = K.load_panel()
+    target = H.her2st_genes()
+    if not target:
+        raise SystemExit(f"no her2st count files under {K.HER2ST_ROOT}/ST-cnts")
+    cfiles = [H.raw_paths(s)["counts"] for s in H.he_sections()]
+    all_ensg = sorted(set().union(*(H.read_raw_counts_header(f) for f in cfiles if f.exists())))
+    emap = H.ensg_to_symbol(all_ensg, target | set(panel))
+    emap.to_csv(H.HE_CALIB / "ensg_to_symbol.tsv", sep="\t", index=False)
+    symbol = dict(zip(emap.ensg, emap.symbol))
+    inp = set(emap.symbol) & set(panel)
+    print(f"ENSG -> symbol over {len(all_ensg)} He features: {emap.source.value_counts().to_dict()}; "
+          f"panel genes reachable {len(inp)}/{len(panel)}")
     print(f"her2st ref {ref['um_per_px_ref']:.4f} um/px ({ref['px_per_unit_ref']:.2f} px per 200 um)")
 
     rows, detected = [], {}

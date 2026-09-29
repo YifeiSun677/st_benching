@@ -24,10 +24,8 @@ Section id <SEC> = metadata patient + '_' + replicate, e.g. BC23287_C1.
 from __future__ import annotations
 
 import gzip
-import importlib.util
 import json
 import os
-import pickle
 import re
 from pathlib import Path
 
@@ -107,6 +105,10 @@ def read_tumor(path: Path) -> dict:
     return out
 
 
+def read_raw_counts_header(path: Path) -> list[str]:
+    return list(pd.read_csv(path, sep="\t", index_col=0, nrows=0).columns)
+
+
 def fit_scale(sp: pd.DataFrame) -> dict:
     """pixel ~ array unit per axis (array units are 200 um apart) -> um/px and fit quality."""
     sx, ix = np.polyfit(sp["x"], sp["pixel_x"], 1)
@@ -120,33 +122,62 @@ def fit_scale(sp: pd.DataFrame) -> dict:
 
 
 # ------------------------------------------------------------ gene symbols ----
-class _IdentityDict(dict):
-    """Stand-in for stnet.utils.ensembl.IdentityDict: unknown keys map to themselves."""
-    def __missing__(self, key):
-        return key
+HGNC_URL = "https://storage.googleapis.com/public-download-files/hgnc/tsv/tsv/hgnc_complete_set.txt"
 
 
-class _StnetUnpickler(pickle.Unpickler):
-    def find_class(self, module, name):
-        if name == "IdentityDict":
-            return _IdentityDict
-        return super().find_class(module, name)
+def hgnc_table() -> pd.DataFrame:
+    """HGNC complete set (cached in raw/). ST-Net's own ensembl table on the pod is an empty stub,
+    and her2st's counts are symbols, so He's ENSG ids are named via HGNC."""
+    p = HE_RAW / "hgnc_complete_set.txt"
+    if not p.exists():
+        import urllib.request
+        tmp = p.with_suffix(".part")
+        urllib.request.urlretrieve(HGNC_URL, tmp)
+        tmp.replace(p)
+    return pd.read_csv(p, sep="\t", dtype=str,
+                       usecols=["symbol", "ensembl_gene_id", "prev_symbol", "alias_symbol"])
 
 
-def ensembl_symbols(stnet_root: str | None = None) -> dict:
-    """ENSG -> symbol with ST-Net's own table (so He symbols match what the ST-Net run used).
-    ensembl.pkl pickles stnet's IdentityDict, so it is unpickled with a local stand-in class
-    (no stnet / openslide import); without the pkl, stnet/utils/ensembl.py builds it from the tsv."""
-    root = Path(stnet_root or os.environ.get("STNET", "/workspace/ST-Net"))
-    pkl = root / "stnet" / "utils" / "ensembl.pkl"
-    if pkl.exists():
-        with open(pkl, "rb") as f:
-            sym = _StnetUnpickler(f).load()
-        return sym if isinstance(sym, _IdentityDict) else _IdentityDict(sym)
-    spec = importlib.util.spec_from_file_location("stnet_ensembl", root / "stnet" / "utils" / "ensembl.py")
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod.symbol
+def her2st_genes() -> set:
+    """Union of gene names over all her2st count files (header only)."""
+    genes = set()
+    for f in sorted((K.HER2ST_ROOT / "ST-cnts").glob("*.tsv*")):
+        genes |= set(pd.read_csv(f, sep="\t", index_col=0, nrows=0).columns)
+    return genes
+
+
+def ensg_to_symbol(ensg_ids, target: set) -> pd.DataFrame:
+    """ENSG -> the symbol her2st uses.  Per ENSG: HGNC current symbol if it is in `target`,
+    else a previous symbol in `target`, else an alias in `target` (her2st predates some renames,
+    e.g. AES -> TLE5); otherwise the current symbol (or the ENSG id when HGNC has none).
+    A target symbol claimed by several ENSG keeps only its 'current' claimant; other claimants
+    fall back to their own current symbol so no two He features are silently summed.
+    Returns columns ensg, symbol, source (current | prev | alias | ambiguous | not_in_her2st | no_hgnc)."""
+    h = hgnc_table().dropna(subset=["ensembl_gene_id"]).drop_duplicates("ensembl_gene_id")
+    h = h.set_index("ensembl_gene_id")
+    rows = []
+    for e in ensg_ids:
+        if e not in h.index:
+            rows.append((e, e, "no_hgnc", e)); continue
+        r = h.loc[e]
+        if r["symbol"] in target:
+            rows.append((e, r["symbol"], "current", r["symbol"])); continue
+        for src in ("prev", "alias"):
+            v = r[f"{src}_symbol"]
+            hit = [x for x in (v.split("|") if isinstance(v, str) else []) if x in target]
+            if hit:
+                rows.append((e, hit[0], src, r["symbol"])); break
+        else:
+            rows.append((e, r["symbol"], "not_in_her2st", r["symbol"]))
+    df = pd.DataFrame(rows, columns=["ensg", "symbol", "source", "hgnc_symbol"])
+    owned = set(df.loc[df["source"] == "current", "symbol"])
+    for sym, grp in df[df["source"].isin(["prev", "alias"])].groupby("symbol"):
+        prev = grp[grp["source"] == "prev"]
+        keep = None if sym in owned else prev.index[0] if len(prev) == 1 else \
+            grp.index[0] if len(prev) == 0 and len(grp) == 1 else None
+        for i in grp.index.drop(keep) if keep is not None else grp.index:
+            df.loc[i, ["symbol", "source"]] = [df.loc[i, "hgnc_symbol"], "ambiguous"]
+    return df
 
 
 # ------------------------------------------------------------ her2st-like ----
