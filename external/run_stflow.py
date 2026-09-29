@@ -18,7 +18,7 @@ Per fold P:
   truth     log1p(panel CP10K) -- norm_target.build_target(..., "panel_cp10k_log1p")
 
 usage: cd /workspace/st_benching && python external/run_stflow.py --folds B
-needs: pip install -r stflow_port/requirements_stflow.txt   (timm, einops, torch_geometric, ...)
+needs: pip install -r stflow/requirements_stflow.txt   (timm, einops, torch_geometric, ...)
 """
 import argparse
 import json
@@ -35,7 +35,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import common as K  # noqa: E402
 
-sys.path.insert(0, str(K.ST_BENCH / "stflow_port"))
+_SF = K.ST_BENCH / "stflow"                            # renamed from stflow_port/ in c418bd2
+sys.path.insert(0, str(_SF if (_SF / "stflow_import.py").exists() else K.ST_BENCH / "stflow_port"))
 import build_features as BF  # noqa: E402
 import config as SC  # noqa: E402
 import train as T  # noqa: E402

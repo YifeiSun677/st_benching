@@ -439,14 +439,98 @@ here **and** in F.1. The scorer then shows it as a separate model, `hist2st_ep10
 
 ---
 
+# Part G — TRIPLEX transfer
+
+Driver: `run_triplex_he.py`. It reuses `run_triplex.py` (the Visium driver: APEG grid scan, `run_model`)
+and the `triplex/` port, with weights `triplex_lopo_833_e20_ckpt` (`final.pt`).
+
+- **Target branch:** BLEEP's white-padded 224-px crop.
+- **Global branch:** CIGAR ResNet18 features, cached under `ext/he/features/triplex/`.
+- **Neighbour branch:** the port's own `_build_neighbor`, an exact 5×5 array-grid lookup exactly as on her2st.
+  A local test averaged 21.6 of 25 slots filled, lower only at tissue edges.
+- **Positions:** array (col, row) = He (x, y).
+- **Truth:** panel CPM → log1p.
+- **APEG grid:** recovered per fold from the stored held-out predictions (`--grid scan`), as in the Visium arm.
+
+## G.0 Preflight
+
+```bash
+cd /workspace/st_benching && python -c "import sys; sys.path.insert(0,'external'); import run_triplex; print('triplex ok')"
+```
+
+## G.1 her2st held-out + round-trip
+
+```bash
+python external/run_triplex.py --sections --out /workspace/runs/he_triplex 2>&1 | tee /workspace/runs/he_triplex_g1.log
+```
+
+**Check:** `ROUNDTRIP PASS`, and each fold's grid scan should have a best entry near 0.
+
+## G.2 Smoke test, then the full run
+
+```bash
+python external/run_triplex_he.py --folds B --sections BC23287_C1 --out /workspace/runs/he_triplex_smoke
+```
+
+```bash
+rm -rf /workspace/runs/he_triplex_smoke && python external/run_triplex_he.py --out /workspace/runs/he_triplex 2>&1 | tee /workspace/runs/he_triplex/predict.log
+```
+
+All He sections are built once, holding about 4 GB of patches in RAM plus the cached CIGAR features. Then each fold runs all of them.
+
+---
+
+# Part H — STFlow transfer
+
+Driver: `run_stflow_he.py`. It reuses `run_stflow.py` (the Visium driver) and the `stflow/` port
+(`run_stflow.py` now finds it under its new name; it was `stflow_port/`). It uses the depth-normalised run,
+`stflow_lopo_833_normtarget_e20`, with the model rebuilt from each fold's `run.json` and weights from `last.pth`.
+
+- **Prior:** the Gaussian refit on the fold's training labels.
+- **Features:** UNI on 112-µm crops, which is 163 px at her2st scale. They are cached under `ext/he/features/stflow/`.
+- **Sampling:** one `predict()` per section with the run's `eval_seed`.
+- **Truth:** log1p(panel CP10K).
+
+## H.0 Preflight
+
+```bash
+cd /workspace/st_benching && python -c "import sys; sys.path.insert(0,'external'); import run_stflow; print('stflow ok')"
+```
+
+If it fails, run `pip install -r stflow/requirements_stflow.txt` (timm, einops, torch_geometric, …).
+UNI weights must be where `stflow/config.py` expects them.
+
+## H.1 her2st held-out + round-trip
+
+```bash
+python external/run_stflow.py --sections --out /workspace/runs/he_stflow 2>&1 | tee /workspace/runs/he_stflow_h1.log
+```
+
+**Check:** `ROUNDTRIP PASS` (tolerance 0.002, because the sampler is stochastic) and `SEED CHECK: every |stored - new| is within …`.
+
+## H.2 He features, then predict
+
+```bash
+python external/run_stflow_he.py --features_only 2>&1 | tee /workspace/runs/he_stflow_features.log
+```
+
+```bash
+python external/run_stflow_he.py --out /workspace/runs/he_stflow 2>&1 | tee /workspace/runs/he_stflow/predict.log
+```
+
+UNI (ViT-L) runs on about 27k crops once. After that, each fold runs the flow sampler per section.
+
+---
+
 # Scoring all models together
 
 ```bash
 python external/score_he.py
 ```
 
-This scores every `runs/he_*` directory into `results/he/`, with ST-Net, BLEEP, HisToGene, Path2Space, DeepPT and Hist2ST side by side.
+This scores every `runs/he_*` directory into `results/he/`, with all eight models (ST-Net, BLEEP, HisToGene, Path2Space, DeepPT, Hist2ST, TRIPLEX, STFlow) side by side.
 Each model is paired only with its **own** her2st held-out (its C.1/D.1-style step), so every delta stays within one model.
 
 **Target spaces differ by model:** ST-Net log((1+c)/(n+Z)), BLEEP CPM-log1p, HisToGene log10(CP10K+1),
-Path2Space median-lognorm, DeepPT log10(CP10K+1) over all genes, Hist2ST median-library log10. PCC and the paired delta are compared across models; absolute SSE is not.
+Path2Space median-lognorm, DeepPT log10(CP10K+1) over all genes, Hist2ST median-library log10,
+TRIPLEX CPM-log1p, STFlow log1p(panel CP10K). PCC and the paired delta are compared across models; absolute SSE is not.
