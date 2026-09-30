@@ -246,6 +246,21 @@ neighbours swapped), corr > 0.9999. Re-running the *He* driver today gives exact
 TCGA path equals the He path; the stored He preds were made on a different GPU/software state. Verified with
 `--he-root /workspace/runs/he_bleep_recheck` (100 % identical). BLEEP is not bit-reproducible across hardware.
 
+**TRIPLEX dropout (decision 2026-09-30: dropout OFF at inference).** Upstream `MultiHeadAttention.train()`
+(NEXGEM/TRIPLEX `src/model/TRIPLEX/module.py`) calls `super().train(mode)` only when `attn_bias=True`, so
+`model.eval()` leaves the global encoder's bias-free attention layers (3 × 6 = 18 modules) and their
+`nn.Dropout` in training mode. Every forward was a random draw: re-runs differ by 0.3–0.6 (corr ≈ 0.999),
+and no APEG grid reproduces the stored her2st predictions. This is in upstream's own inference too (and its
+flash branch also passes `drop_p` unconditionally). `run_triplex_tcga.force_eval` runs `model.eval()` then
+clears the flag on the stuck modules → deterministic. Architecture/dropout values match upstream
+`config/ST/andersson/TRIPLEX.yaml` exactly. **The her2st, He and Visium TRIPLEX results were made with
+dropout on** — re-run them with `force_eval` for a consistent comparison (inference only).
+
+**STFlow he-check** vs stored He preds: max diff 0.7–1.8, corr 0.998–0.9997 (environment drift through the
+flow-sampling steps). Against the He driver re-run today: max diff ≤ 3e-5 → the TCGA path equals the He path.
+Placeholder check: bit-identical. 1-spot blocks (2 spots in the cohort) are fed as two copies (approximation:
+the copies draw different prior noise).
+
 ### B.7 After a pod restart (only /workspace persists)
 
 ```bash

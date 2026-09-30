@@ -74,11 +74,31 @@ def run_block(model, patches, neigh, mask, glob_feat, pos, device):
     return R.run_model(model, patches, neigh, mask, glob_feat, pos, device)
 
 
+def force_eval(model):
+    """Inference with dropout OFF (decision 2026-09-30).  Upstream MultiHeadAttention overrides train() and only
+    calls super().train(mode) when attn_bias=True, so model.eval() leaves the bias-free attention layers (the
+    global encoder: 3 layers x 6 submodules = 18) and their nn.Dropout in training mode -> every forward is a
+    random draw (upstream's own inference, and our her2st / He / Visium TRIPLEX runs, had this).  model.eval()
+    first (so the attn_bias layers build their cached self.ab), then clear the flag on whatever is still in
+    training mode.  drop_p is zeroed too: it is only read by the flash branch, which the port disables, but
+    this keeps inference deterministic if that ever changes.  Returns how many modules were forced."""
+    model.eval()
+    stuck = [m for m in model.modules() if m.training]
+    for m in stuck:
+        m.training = False
+    for m in model.modules():
+        if hasattr(m, "drop_p"):
+            m.drop_p = 0.0
+    assert not any(m.training for m in model.modules())
+    return len(stuck)
+
+
 def load_models(folds, panel_cache, grid_rule, device):
     models = {}
     for fd in folds:
         P, k = fd["patient"], fd["fold"]
         model, _ = R.load_fold(TAG, P, device=device)
+        n_forced = force_eval(model)
         tr = {s: _load_section(s, panel_cache) for s in fd["train"]}
         modal, _ = R.pin_grid(model, [tr[s]["coords"] for s in fd["train"]])
         note = ""
@@ -98,11 +118,14 @@ def load_models(folds, panel_cache, grid_rule, device):
         R.set_grid(model, grid)
         models[P] = dict(fold=k, model=model,
                          extra=dict(ckpt=os.path.join(TC.CKPT_DIR, TAG, f"fold_{P}", "final.pt"), cohort="tcga",
+                                    dropout="OFF at inference (force_eval): upstream train() override left "
+                                            f"{n_forced} modules in training mode",
                                     apeg_grid=grid, apeg_grid_rule=grid_rule, apeg_grid_modal=modal, apeg_scan=note,
                                     neighbours="exact array-grid lookup on the whole window",
                                     positions="tcga_common.her2st_blocks (translate to 2,2; split to fit x 2-32, y 2-34)",
                                     raw="log1p(CPM over the panel)", inverse="max(expm1(raw), 0)", train=fd["train"]))
-        print(f"  [{P}] APEG grid {grid} (rule {grid_rule}; modal {modal}) {note}", flush=True)
+        print(f"  [{P}] dropout off ({n_forced} modules forced to eval); APEG grid {grid} "
+              f"(rule {grid_rule}; modal {modal}) {note}", flush=True)
         del tr
         torch.cuda.empty_cache()
     return models
@@ -114,15 +137,20 @@ def he_check(sec, models, panel_cache, perm, enc, device, he_root):
     sp = K.read_spots(sec, H.HE_DATA).loc[sid]
     neigh, mask = _build_neighbor(glob_feat, sp[["y", "x"]].to_numpy(np.int64))
     pos = sp[["x", "y"]].to_numpy(np.float32)
-    worst = 0.0
+    ok = True
     for P, m in models.items():
         z = np.load(os.path.join(he_root, f"fold0{m['fold']}_{P}", "preds", f"{sec}.npz"), allow_pickle=True)
         assert [str(s) for s in z["spot_id"]] == sid, "spot order differs from the stored He predictions"
         pred = R.run_model(m["model"], patches, neigh, mask, glob_feat, pos, device)[:, perm]
-        diff = float(np.abs(pred - z["pred"]).max())
-        worst = max(worst, diff)
-        print(f"  he-check {sec} fold {P}: {len(sid)} spots, neighbours/spot {mask.sum(1).mean():.1f}, max |diff| {diff:.2e}")
-    print(f"HE-CHECK {'PASS' if worst < 1e-3 else 'FAIL'} (worst {worst:.2e}, tolerance 1e-3)")
+        again = R.run_model(m["model"], patches, neigh, mask, glob_feat, pos, device)[:, perm]
+        rep = float(np.abs(pred - again).max())
+        c = float(np.corrcoef(pred.ravel(), z["pred"].ravel())[0, 1])
+        ok = ok and rep == 0.0 and c > 0.99
+        print(f"  he-check {sec} fold {P}: {len(sid)} spots, neighbours/spot {mask.sum(1).mean():.1f}, "
+              f"run-twice max |diff| {rep:.2e}, vs stored (dropout-on) He: max |diff| "
+              f"{float(np.abs(pred - z['pred']).max()):.2e}, corr {c:.6f}")
+    print(f"HE-CHECK {'PASS' if ok else 'FAIL'} (dropout off: two runs bit-identical, and corr > 0.99 with the "
+          "stored He predictions, which were random draws with dropout on)")
 
 
 def main():
