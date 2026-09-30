@@ -18,8 +18,8 @@ Same model, branches and APEG grid rule as run_triplex_he.py:
 
 All 8 fold models stay on the GPU; sections are the outer loop.  Resumable per section.
 
---he-check SEC   one He section through THIS code path (fresh crops + CIGAR, He positions) vs the stored He
-                 predictions (/workspace/runs/he_triplex/...): PASS = max |diff| < 1e-3.
+--he-check SEC   one He section through THIS code path (fresh crops + CIGAR, He positions), dropout off: PASS =
+                 two runs agree to < 1e-4 and corr > 0.99 with the stored (dropout-on, random-draw) He predictions.
 
 writes: <out>/fold0<k>_<P>/agg/<SEC>.npz  (+ spots/<SEC>.npz for --spots-for patients)
 usage:  cd /workspace/st_benching && python external/run_triplex_tcga.py [--limit 6] [--he-check BC23287_C1]
@@ -145,11 +145,11 @@ def he_check(sec, models, panel_cache, perm, enc, device, he_root):
         again = R.run_model(m["model"], patches, neigh, mask, glob_feat, pos, device)[:, perm]
         rep = float(np.abs(pred - again).max())
         c = float(np.corrcoef(pred.ravel(), z["pred"].ravel())[0, 1])
-        ok = ok and rep == 0.0 and c > 0.99
+        ok = ok and rep < 1e-4 and c > 0.99             # GPU float noise ~1e-6; dropout-on re-runs differ by 0.3-0.6
         print(f"  he-check {sec} fold {P}: {len(sid)} spots, neighbours/spot {mask.sum(1).mean():.1f}, "
               f"run-twice max |diff| {rep:.2e}, vs stored (dropout-on) He: max |diff| "
               f"{float(np.abs(pred - z['pred']).max()):.2e}, corr {c:.6f}")
-    print(f"HE-CHECK {'PASS' if ok else 'FAIL'} (dropout off: two runs bit-identical, and corr > 0.99 with the "
+    print(f"HE-CHECK {'PASS' if ok else 'FAIL'} (dropout off: two runs agree to < 1e-4, and corr > 0.99 with the "
           "stored He predictions, which were random draws with dropout on)")
 
 
