@@ -212,7 +212,19 @@ reproducibility between the two faces of the block, and each face vs RNA). Full 
 Pipeline check done on the Mac with synthetic models: a model = RNA + noise scored median r ≈ 0.8, p = 1/(B+1);
 a random model ≈ 0.
 
-### B.5 Remaining models
+### B.5 BLEEP and DeepPT (patch-level, like ST-Net)
+
+| model | driver | output raw → lin | he-check PASS rule |
+|---|---|---|---|
+| BLEEP | `external/run_bleep_tcga.py` | mean log1p(panel CPM) of top-50 retrieved her2st spots → `expm1` | ≥ 99 % spots identical and corr > 0.999 per fold (retrieval is discrete) |
+| DeepPT | `external/run_deeppt_tcga.py` | log10(CP10K+1) → `max(10**raw − 1, 0)` | max \|diff\| < 1e-2 and corr > 0.9999 (fp16 encoder) |
+
+Environment after a pod restart: `pip install -r bleep/requirements_bleep.txt` (BLEEP: timm, …).
+DeepPT features are **not cached** (3.7 GB): each section is encoded once and fed to the 8 fold heads.
+Same sequence as ST-Net: `--he-check BC23287_C1` → smoke on the four B.2 sections → full run →
+`pseudobulk.py --runs /workspace/runs/tcga_<model>` → `score_tcga.py --pb …/pseudobulk_<model>.tsv.gz`.
+
+### B.6 Remaining models
 
 Each needs `external/run_<model>_tcga.py` built from `run_<model>_he.py` the same way: identical
 model loading, crops, features and coordinates; no truth; `tcga_common.write_agg` with the model's own
