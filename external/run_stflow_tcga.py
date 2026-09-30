@@ -60,6 +60,12 @@ def placeholder(n, n_genes, offset=0.0):
 
 
 def sample(m, feats, coords, name, patient, genes, labels=None):
+    if len(feats) == 1:
+        # upstream test() computes per-section metrics that need >= 2 spots (scipy: "x and y must have length
+        # at least 2").  A 1-spot block is fed as two identical copies and the first row kept.  Unlike TRIPLEX
+        # this is an approximation (the two copies draw different prior noise); it touches 2 of 450,442 spots.
+        two = sample(m, np.concatenate([feats, feats]), np.concatenate([coords, coords]), name, patient, genes)
+        return two[:1]
     d = dict(section=name, patient=patient, features=feats, coords=np.asarray(coords, np.float32),
              labels=placeholder(len(feats), len(genes)) if labels is None else labels,
              spot_id=np.arange(len(feats)).astype(str))
