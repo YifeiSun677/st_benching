@@ -74,6 +74,39 @@ def default_spot_patients() -> list[str]:
     return list(c.groupby("stratum").head(1).index)
 
 
+HER2ST_X = (2, 32)    # array x / y values present in her2st training sections (learned position
+HER2ST_Y = (2, 34)    # embeddings of HisToGene / Hist2ST exist only for these indices)
+
+
+def her2st_blocks(x, y) -> list[tuple[np.ndarray, np.ndarray]]:
+    """Map a TCGA window's local array coords onto positions the her2st models were trained on.
+
+    Windows are up to 48 x 48 and start at 1; her2st used x in [2, 32], y in [2, 34] only, so
+    other indices hit untrained embedding rows.  A window that fits (<= 31 x 33) is translated to
+    start at (2, 2); a larger one is split -- balanced, as prep_slides.py splits clusters -- into
+    blocks that fit, each translated to (2, 2) and run as its own forward pass.
+    Returns [(row indices into the window's spots, positions int64 [n, 2])].
+    """
+    x, y = np.asarray(x, int), np.asarray(y, int)
+    wx, wy = HER2ST_X[1] - HER2ST_X[0] + 1, HER2ST_Y[1] - HER2ST_Y[0] + 1
+
+    def cuts(v, win):
+        lo, hi = v.min(), v.max()
+        n = int(np.ceil((hi - lo + 1) / win))
+        size = int(np.ceil((hi - lo + 1) / n))
+        return (v - lo) // size
+
+    bx, by = cuts(x, wx), cuts(y, wy)
+    out = []
+    for key in sorted(set(zip(by.tolist(), bx.tolist()))):
+        idx = np.nonzero((by == key[0]) & (bx == key[1]))[0]
+        pos = np.stack([x[idx] - x[idx].min() + HER2ST_X[0], y[idx] - y[idx].min() + HER2ST_Y[0]], 1)
+        assert pos[:, 0].max() <= HER2ST_X[1] and pos[:, 1].max() <= HER2ST_Y[1], "block does not fit"
+        out.append((idx, pos.astype(np.int64)))
+    assert sum(len(i) for i, _ in out) == len(x)
+    return out
+
+
 def agg_path(out_dir: Path | str, sec: str) -> Path:
     return Path(out_dir) / "agg" / f"{sec}.npz"
 

@@ -62,7 +62,7 @@ def main():
     ap.add_argument("--B", type=int, default=1000)
     ap.add_argument("--seed", type=int, default=20260929)
     a = ap.parse_args()
-    pb = pd.read_csv(a.pb, sep="\t")
+    pb = pd.read_csv(a.pb, sep="\t", dtype={"fold": str})       # 'mean' and 0..7 in one column
     model = pb.model.iloc[0]
     meta = Path(a.meta)
     rna = pd.read_csv(meta / "rna" / "rna_panel_cpm.tsv", sep="\t", index_col=0)
