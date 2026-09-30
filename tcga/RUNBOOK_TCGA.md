@@ -224,10 +224,33 @@ DeepPT features are **not cached** (3.7 GB): each section is encoded once and fe
 Same sequence as ST-Net: `--he-check BC23287_C1` → smoke on the four B.2 sections → full run →
 `pseudobulk.py --runs /workspace/runs/tcga_<model>` → `score_tcga.py --pb …/pseudobulk_<model>.tsv.gz`.
 
-### B.6 Remaining models
+### B.6 Spatial models: HisToGene, Hist2ST, TRIPLEX, STFlow, Path2Space
 
-Each needs `external/run_<model>_tcga.py` built from `run_<model>_he.py` the same way: identical
-model loading, crops, features and coordinates; no truth; `tcga_common.write_agg` with the model's own
-inverse transform. Then B.2 (he-check + smoke incl. the 1-spot window, and **placeholder invariance**
-for every model whose He driver reads `ST-cnts`) → B.3 → B.4. **Do not change anything in A.* after
-seeing any score.**
+| model | driver | raw → lin | notes |
+|---|---|---|---|
+| HisToGene | `run_histogene_tcga.py` | log10(CP10K+1) → `max(10**x−1,0)` | positions remapped (below) |
+| Hist2ST | `run_hist2st_tcga.py` | log10(x/lib·median+1) → `max(10**x−1,0)` | positions remapped; k capped at n−1 (upstream `calcADJ` raises IndexError on blocks with ≤ k spots); self-loop on isolated spots (He fix) |
+| TRIPLEX | `run_triplex_tcga.py` | log1p(panel CPM) → `max(expm1,0)` | APEG grid scanned per fold as He; neighbours on the whole window; position + global branch per block |
+| STFlow | `run_stflow_tcga.py` | log1p(panel CP10K) → `max(expm1,0)` | one seeded `predict()` per block; row-index placeholder labels; `--placeholder-check` |
+| Path2Space | `run_path2space_tcga.py` | lognorm log1p → `max(expm1,0)` | Macenko in a bounded `spawn` pool (no tiles on disk); CPU-bound (~10-core quota on this pod) |
+
+**Position remapping** (`tcga_common.her2st_blocks`): her2st training sections use array x ∈ [2, 32],
+y ∈ [2, 34] only; TCGA windows start at 1 and reach 48, so learned position embeddings would be indexed
+outside the trained rows. Each window is translated to start at (2, 2); windows larger than 31 × 33 are
+split (balanced) into blocks that fit, one forward pass per block. Geometry inside a block is unchanged.
+267/1,429 windows (111,891 spots) are split. `--he-check` keeps He's own positions, to reproduce He.
+Open question for the He arm: He array coords likely also start at 1 → its edge spots hit untrained rows.
+
+**BLEEP he-check** vs the stored He preds: ~90 % spots identical, max diff ≈ 0.22 (= one of 50 retrieved
+neighbours swapped), corr > 0.9999. Re-running the *He* driver today gives exactly the same numbers, so the
+TCGA path equals the He path; the stored He preds were made on a different GPU/software state. Verified with
+`--he-root /workspace/runs/he_bleep_recheck` (100 % identical). BLEEP is not bit-reproducible across hardware.
+
+### B.7 After a pod restart (only /workspace persists)
+
+```bash
+pip install -q argcomplete pyyaml scikit-image opencv-python-headless pillow scipy h5py openslide-python openslide-bin tqdm pandas matplotlib seaborn scikit-learn statsmodels spams-bin
+pip install -q -r /workspace/st_benching/bleep/requirements_bleep.txt
+# easydl (Hist2ST) still imports Iterable from collections -- Python >= 3.10 needs collections.abc:
+grep -rl "from collections import" /usr/local/lib/python3.12/dist-packages/easydl/ | xargs sed -i -E 's/from collections import (Iterable|Mapping|Sequence|Callable|MutableMapping)\b/from collections.abc import \1/'
+```
