@@ -116,6 +116,10 @@ def main():
             print(f"[{m} rep{r}] running ...", flush=True)
             row = run_one(m, args, r)
             print(json.dumps(row), flush=True)
+            if row["returncode"] != 0 or not row["n_spots"]:
+                tail = Path(args.out, f"{m}_rep{r}.log").read_text().splitlines()[-15:]
+                print(f"!! {m} FAILED -- numbers are not valid. Log tail:\n  " + "\n  ".join(tail),
+                      flush=True)
             rows.append(row)
             Path(args.out, "efficiency.json").write_text(json.dumps(rows, indent=2))
 
