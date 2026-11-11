@@ -61,6 +61,9 @@ def _index_from_keys(keys, source: str) -> pd.DataFrame:
         rows.append(dict(row=i, key=f"{section}:{sid}", section=section,
                          patient=section[0], spot_id=sid, ax=ax, ay=ay))
     df = pd.DataFrame(rows)
+    # pandas >= 3 stores text as its own string dtype, whose .values comparisons give
+    # pandas BooleanArrays; plain object columns keep every mask a NumPy bool array.
+    df = df.astype({c: object for c in ("key", "section", "patient", "spot_id")})
     assert df.key.is_unique, "duplicate spot keys in index"
     df.attrs["source"] = source
     return df
