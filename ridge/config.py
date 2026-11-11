@@ -69,8 +69,10 @@ FEATURE_SOURCES = {
 }
 
 # Ridge
-ALPHAS = [10.0 ** k for k in range(-2, 7)] + [3.0 * 10.0 ** k for k in range(-2, 6)]
-ALPHAS = sorted(ALPHAS)                 # 10^-2 ... 10^6, two points per decade
+ALPHAS = [10.0 ** k for k in range(-2, 9)] + [3.0 * 10.0 ** k for k in range(-2, 8)]
+ALPHAS = sorted(ALPHAS)                 # 10^-2 ... 10^8, two points per decade
+# (was 10^-2 ... 10^6; ctranspath/full fold E chose 10^6 = the top edge, so the grid
+#  was extended. Weak features need alpha near n_train ~ 1e4 x feature scale.)
 GLOBAL_PCS = 5                          # section-mean features -> PCA(5) on training sections
 CLIP_AT_ZERO = False                    # pure linear output by default (no post-processing)
 
