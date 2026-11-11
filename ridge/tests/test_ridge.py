@@ -50,8 +50,8 @@ def test_norm_spot_id():
 
 
 def test_ridge_matches_sklearn():
-    from sklearn.linear_model import Ridge
-    from sklearn.preprocessing import StandardScaler
+    Ridge = pytest.importorskip("sklearn.linear_model").Ridge        # reference only, not
+    StandardScaler = pytest.importorskip("sklearn.preprocessing").StandardScaler  # used by ridge/
     rng = np.random.default_rng(0)
     X = rng.normal(size=(300, 20)) * rng.uniform(0.1, 5, 20) + 3
     Y = X[:, :3] @ rng.normal(size=(3, 4)) + rng.normal(size=(300, 4))

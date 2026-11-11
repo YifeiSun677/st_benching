@@ -118,7 +118,7 @@ def load_counts(index: pd.DataFrame, genes: list[str], root: str | None = None,
         missing = set(grp.spot_id) - set(df.index)
         assert not missing, f"{sec}: {len(missing)} index spots absent from counts"
         sub = df.loc[grp.spot_id.values]
-        lib_full[grp.row.values] = sub.sum(1).values
+        lib_full[grp.row.values] = sub.sum(axis=1).values
         counts[grp.row.values] = sub.reindex(columns=genes, fill_value=0).values
     if save:
         os.makedirs(os.path.dirname(cache_path), exist_ok=True)

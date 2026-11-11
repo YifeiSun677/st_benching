@@ -90,8 +90,8 @@ def score_dir(run_dir, sections=None, out_dir=None, quiet=False):
     pg.index.name = "gene"
     mg = pd.DataFrame(mae_by_fold, index=genes)
     mg.index.name = "gene"
-    across = pg.mean(1)                                  # per gene over folds, NaN-skipping
-    mae_across = mg.mean(1)
+    across = pg.mean(axis=1)                             # per gene over folds, NaN-skipping
+    mae_across = mg.mean(axis=1)
     headline = dict(run_dir=run_dir, patients=list(pcc_by_fold),
                     sections=sorted(sections) if sections else "all",
                     pcc_mean=float(across.mean()) if across.notna().any() else None,
