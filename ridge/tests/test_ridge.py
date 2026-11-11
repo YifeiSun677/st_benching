@@ -95,6 +95,21 @@ def test_choose_alpha_behaviour():
     assert np.nanmax(scores_n) < 0.2                          # nothing to learn -> near 0
 
 
+def test_edge_status_and_pcc_plateau():
+    a = [1.0, 10.0, 100.0, 1000.0]
+    assert solver.edge_status(a, [0.1, 0.3, 0.2, 0.1], 10.0) == ""
+    assert solver.edge_status(a, [0.3, 0.2, 0.1, 0.0], 1.0) == "LOW EDGE"
+    assert solver.edge_status(a, [0.1, 0.2, 0.3, 0.4], 1000.0) == "HIGH EDGE"
+    assert solver.edge_status(a, [0.1, 0.2, 0.30001, 0.30002], 1000.0) == "PLATEAU"
+    # with a weak signal, PCC converges as alpha -> inf while predictions shrink
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(2000, 300))
+    Y = 0.02 * X[:, :3] @ rng.normal(size=(3, 20)) + rng.normal(size=(2000, 20))
+    fit = solver.RidgeFit(solver.Stats(X[:1500], Y[:1500]))
+    pcc = [np.nanmean(solver.gene_pcc(fit.predict(X[1500:], al), Y[1500:])) for al in (1e6, 1e8)]
+    assert abs(pcc[0] - pcc[1]) < 1e-4
+
+
 def test_align_source_detects_problems():
     index = data._index_from_keys(["S1:1x1", "S1:1x2", "S1:2x1"], "test")
     good = lambda: iter([("S1", ["1x1", "1x2", "2x1", "9x9"], np.eye(4, 3))])

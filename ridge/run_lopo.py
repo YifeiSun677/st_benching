@@ -115,7 +115,7 @@ def run_ridge(index, Y, genes, out_root, patients, meta, source, context, clip):
             m = sections[test] == sec
             _write_section(fdir, sec, test[m], pred[m], Y, index, genes, fit.my,
                            dict(meta, alpha=best))
-        edge = "LOW EDGE" if best == alphas[0] else "HIGH EDGE" if best == alphas[-1] else ""
+        edge = solver.edge_status(alphas, scores, best)
         _dump(fdir, dict(patient=P, model="ridge", source=source, context=context,
                          blocks=blocks, n_features=int(Xf.shape[1]), n_train=int(train_mask.sum()),
                          alpha=best, alpha_at_grid_edge=edge, alphas=alphas,

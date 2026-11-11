@@ -101,6 +101,22 @@ class RidgeFit:
         return W, self.my - self.mx @ W
 
 
+# ------------------------------------------------------------------ grid edge
+def edge_status(alphas, scores, best, tol=1e-4):
+    """'' if alpha is inside the grid; 'LOW EDGE' if the smallest was chosen;
+    'PLATEAU' if the largest was chosen but the inner score had stopped changing
+    over the last decade (as alpha -> inf, ridge predictions shrink toward the mean
+    but their PATTERN converges to the X'Y direction, so within-section PCC, which
+    ignores scale, converges too -- a larger grid cannot change the PCC);
+    'HIGH EDGE' if the largest was chosen and the score was still rising."""
+    if best == alphas[0]:
+        return "LOW EDGE"
+    if best != alphas[-1]:
+        return ""
+    s = np.asarray(scores, float)
+    return "PLATEAU" if len(s) >= 3 and abs(s[-1] - s[-3]) < tol else "HIGH EDGE"
+
+
 # ------------------------------------------------------------------ nested selection
 def choose_alpha(X, Y, patient, sections, train_patients, alphas):
     """Inner leave-one-patient-out over `train_patients` only.

@@ -15,7 +15,7 @@ import os
 
 import pandas as pd
 
-from . import config
+from . import config, solver
 
 
 def _load(p):
@@ -32,12 +32,19 @@ def summarize(out_root=None):
         folds = sorted(glob.glob(os.path.join(d, "fold_*", "fold.json")))
         fj = [_load(f) for f in folds]
         alphas = [f.get("alpha") for f in fj if "alpha" in f]
+        # re-derive edge status from the stored inner-CV curve (older fold.json files
+        # only knew HIGH EDGE, not PLATEAU)
+        status = [solver.edge_status(f["alphas"], f["inner_scores"], f["alpha"])
+                  for f in fj if "inner_scores" in f]
         row = dict(tag=os.path.basename(d), model=cfg.get("model"), source=cfg.get("source") or "",
                    context=cfg.get("context") if cfg.get("model") == "ridge" else "",
                    target=cfg.get("target"), n_folds=len(folds),
                    alpha_min=min(alphas) if alphas else None,
                    alpha_max=max(alphas) if alphas else None,
-                   grid_edge=any(f.get("alpha_at_grid_edge") for f in fj))
+                   grid_edge=any(s in ("HIGH EDGE", "LOW EDGE") for s in status),
+                   plateau_folds="".join(f["patient"] for f, s in
+                                         zip([f for f in fj if "inner_scores" in f], status)
+                                         if s == "PLATEAU"))
         for suffix, name in (("", "all"), ("_annotated", "ann")):
             p = os.path.join(d, f"headline{suffix}.json")
             if os.path.exists(p):
