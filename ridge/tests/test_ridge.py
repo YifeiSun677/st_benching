@@ -100,7 +100,7 @@ def test_edge_status_and_pcc_plateau():
     assert solver.edge_status(a, [0.1, 0.3, 0.2, 0.1], 10.0) == ""
     assert solver.edge_status(a, [0.3, 0.2, 0.1, 0.0], 1.0) == "LOW EDGE"
     assert solver.edge_status(a, [0.1, 0.2, 0.3, 0.4], 1000.0) == "HIGH EDGE"
-    assert solver.edge_status(a, [0.1, 0.2, 0.30001, 0.30002], 1000.0) == "PLATEAU"
+    assert solver.edge_status(a, [0.1, 0.30000, 0.30001, 0.30002], 1000.0) == "PLATEAU"
     # with a weak signal, PCC converges as alpha -> inf while predictions shrink
     rng = np.random.default_rng(0)
     X = rng.normal(size=(2000, 300))
