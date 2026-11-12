@@ -172,6 +172,29 @@ def test_targets_reproduce_each_port(local_cfg):
         assert best[0] == "cp10k_panel_log10" and best[1] < 1e-3
 
 
+@needs_her2st
+@needs_results
+def test_stnet_target_reproduces_stnet_truth(local_cfg, monkeypatch):
+    """stnet_lognorm + the stored denominators reproduce ST-Net's truth for a whole
+    patient, and the denominator file covers every canonical spot."""
+    monkeypatch.setattr(config, "STNET_DENOM", str(REPO / "panels" / "stnet_denominator.csv"))
+    f = RESULTS / "stnet" / "B_25.npz"
+    if not f.exists() or not Path(config.STNET_DENOM).exists():
+        pytest.skip("no ST-Net predictions or denominator file")
+    index = data.build_index()
+    genes = data.load_panel()
+    data.load_stnet_denominator(index.key.values)                    # raises if any spot is missing
+    z = np.load(f, allow_pickle=True)
+    keys = [f"B{s}:{int(x)}x{int(y)}" for s, (x, y) in zip(z["section"], z["coord"])]
+    pos = dict(zip(index.key, index.row))
+    rows = np.array([pos[k] for k in keys])
+    counts, lib_full = data.load_counts(index.iloc[rows].assign(row=np.arange(len(rows))), genes, save=False)
+    T = data.make_target("stnet_lognorm", counts, lib_full, index.section.values[rows], keys=keys)
+    assert np.abs(T - z["counts"]).max() < 1e-4
+    with pytest.raises(ValueError):
+        data.make_target("stnet_lognorm", counts, lib_full, index.section.values[rows])
+
+
 @needs_results
 def test_scorer_reproduces_triplex_headline(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "GENE_SETS", str(GENE_SETS))

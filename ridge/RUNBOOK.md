@@ -85,6 +85,31 @@ python -m ridge.score --run-dir <any port's run dir> --sections annotated --out-
 Same definition as `triplex/score.py` (verified to 1e-9 on the TRIPLEX run),
 plus MAE and the number of NaN genes.
 
+## Native-scale UNI ridge (one baseline recipe, scored on each model's own scale)
+
+Every deep model is scored on the scale it was trained on, so the general UNI ridge
+(and region mean) are re-run on each of those scales. Already run: `cpm_panel_ln`
+(TRIPLEX, BLEEP) and `raw_ln` (STFlow). The rest (RunPod, CPU, minutes each):
+
+```bash
+# needs panels/stnet_denominator.csv (made from ST-Net's stored truth by ridge.stnet_denominator)
+for t in cp10k_panel_log10 cp10k_full_log10 mediannorm_panel_ln stnet_lognorm; do
+  for c in local full; do
+    python -m ridge.run_lopo --model ridge --source uni_hest112 --context $c --target $t
+  done
+done
+```
+
+| Target | Scored against |
+|---|---|
+| `cp10k_panel_log10` | HisToGene |
+| `cp10k_full_log10` | DeepPT |
+| `mediannorm_panel_ln` | Path2Space, and Hist2ST (its log10 version; identical PCC) |
+| `stnet_lognorm` | ST-Net |
+
+Then copy the 8 run dirs (`ridge_uni_hest112_{local,full}_<target>`) to the Mac's
+`results_4_models/ridge/`.
+
 ## Fair pairings
 
 | Deep model | Frozen twin source | Target (`--target native`) | Patch |

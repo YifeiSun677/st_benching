@@ -14,9 +14,13 @@ max |diff| < 1e-6 unless noted; C = 833-panel counts, zero-filled):
   mediannorm_panel_ln  ln(1 + med_s * C / sum_panel(C))     Path2Space; med_s = median of the
                                                             section's non-zero panel depths
   raw_ln               ln(1 + C)                            STFlow upstream (old) run
+  stnet_lognorm        ln((1 + C) / d_spot)                 ST-Net (gene_transform=log, norm=norm);
+                                                            d_spot = ST-Net's per-spot total over its
+                                                            own gene list, read from config.STNET_DENOM
 
 log10 and ln differ by a constant factor, so PCC is identical between
-cp10k_panel_ln and cp10k_panel_log10; only MAE/MSE differ.
+cp10k_panel_ln and cp10k_panel_log10 (and between mediannorm_panel_ln and Hist2ST's
+log10 version of it); only MAE/MSE differ.
 """
 from __future__ import annotations
 
@@ -155,12 +159,34 @@ TARGETS = {
 }
 
 
-def make_target(name: str, counts, lib_full, sections) -> np.ndarray:
+def load_stnet_denominator(keys, path: str | None = None) -> np.ndarray:
+    """ST-Net's per-spot denominator for `keys` ("SEC:XxY"); raises if any key is missing."""
+    path = path or config.STNET_DENOM
+    d = pd.read_csv(path).set_index("key")["denominator"]
+    keys = [str(k) for k in keys]
+    missing = [k for k in keys if k not in d.index]
+    if missing:
+        raise KeyError(f"{path}: no ST-Net denominator for {len(missing)} spots, e.g. {missing[:3]}")
+    return d.loc[keys].to_numpy(np.float64)
+
+
+# targets that need the spot keys, not just counts
+KEYED_TARGETS = {
+    "stnet_lognorm": lambda C, keys: np.log1p(C) - np.log(load_stnet_denominator(keys))[:, None],
+}
+
+
+def make_target(name: str, counts, lib_full, sections, keys=None) -> np.ndarray:
     """Target matrix in the named space. `sections` is needed for mediannorm
-    (per-section median), so always pass whole sections."""
-    if name not in TARGETS:
-        raise KeyError(f"unknown target {name!r}; choose from {sorted(TARGETS)}")
+    (per-section median), so always pass whole sections; `keys` ("SEC:XxY", one per
+    row) is needed for stnet_lognorm."""
     C = np.asarray(counts, np.float64)
+    if name in KEYED_TARGETS:
+        if keys is None:
+            raise ValueError(f"target {name!r} needs the spot keys")
+        return KEYED_TARGETS[name](C, keys).astype(np.float32)
+    if name not in TARGETS:
+        raise KeyError(f"unknown target {name!r}; choose from {sorted(TARGETS) + sorted(KEYED_TARGETS)}")
     return TARGETS[name](C, np.asarray(lib_full), np.asarray(sections)).astype(np.float32)
 
 

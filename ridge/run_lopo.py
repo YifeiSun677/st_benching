@@ -163,7 +163,8 @@ def main(argv=None):
     index = data.build_index()
     genes = data.load_panel()
     counts, lib_full = data.load_counts(index, genes)
-    Y = data.make_target(target, counts, lib_full, index.section.values).astype(np.float64)
+    Y = data.make_target(target, counts, lib_full, index.section.values,
+                         keys=index.key.values).astype(np.float64)
     print(f"[run] {tag}: {len(index)} spots ({index.attrs['source']}), {len(genes)} genes, "
           f"target={target}")
 

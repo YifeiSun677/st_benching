@@ -21,6 +21,9 @@ ST_BENCH = os.environ.get("ST_BENCH", f"{WS}/st_benching")
 HER2ST_ROOT = os.environ.get("HER2ST_ROOT", f"{WS}/her2st/data")      # ST-cnts/, ST-pat/lbl/
 PANEL = os.environ.get("PANEL", f"{ST_BENCH}/panels/panel_833.txt")
 GENE_SETS = os.environ.get("GENE_SETS", f"{ST_BENCH}/results/gene_sets")
+# ST-Net's per-spot denominator (one number per spot, keyed "SEC:XxY"), recovered from
+# ST-Net's stored truth by ridge.stnet_denominator; needed only for target stnet_lognorm.
+STNET_DENOM = os.environ.get("STNET_DENOM", f"{ST_BENCH}/panels/stnet_denominator.csv")
 
 # Shared 224 px cache (built for BLEEP; used by ST-Net/BLEEP/TRIPLEX). Its index.json
 # fixes the canonical spot order; expression.npy is the shared CPM+log1p truth.
