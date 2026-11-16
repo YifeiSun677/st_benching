@@ -29,7 +29,7 @@ cd /workspace/st_benching
 python -m ridge.check_workspace \
   --preds TRIPLEX=/workspace/triplex_results/triplex_lopo_833 \
           STFlow=/workspace/runs/stflow_lopo_833_hest112_e90 \
-          Path2Space=<path2space run dir>
+          Path2Space=/workspace/st_benching/results/path2space_lopo_833
 ```
 
 Must be PASS before going on: canonical spot index (13,620), raw counts,
@@ -76,10 +76,12 @@ curve. A warning `HIGH EDGE`/`LOW EDGE` means the grid should be extended.
 
 ## 3. Score
 
+Replace the example tag with your run's folder name in `$RIDGE_OUT` (e.g. `ls /workspace/ridge_results`):
+
 ```bash
-python -m ridge.score --tag <tag>                          # all sections
-python -m ridge.score --tag <tag> --sections annotated     # same 8 sections as region_mean
-python -m ridge.score --run-dir <any port's run dir> --sections annotated --out-dir <dir>
+python -m ridge.score --tag ridge_uni_hest112_local_cpm_panel_ln                       # all sections
+python -m ridge.score --tag ridge_uni_hest112_local_cpm_panel_ln --sections annotated  # same 8 sections as region_mean
+python -m ridge.score --run-dir /workspace/triplex_results/triplex_lopo_833 --sections annotated --out-dir /workspace/ridge_results/triplex_annotated
 ```
 
 Same definition as `triplex/score.py` (verified to 1e-9 on the TRIPLEX run),

@@ -28,14 +28,49 @@ def seed_all(seed):
 
 
 def get_opt(model, lr):
-    o = model.configure_optimizers()
+    """Returns (optimizer, scheduler-or-None). Upstream returns
+    {'optimizer': Adam, 'lr_scheduler': StepLR(50, 0.9)}; Lightning steps it once per epoch."""
+    o, sched = model.configure_optimizers(), None
     if isinstance(o, (list, tuple)):
         o = o[0]
     if isinstance(o, dict):
+        sched = o.get("lr_scheduler")
+        if isinstance(sched, dict):
+            sched = sched.get("scheduler")
         o = o["optimizer"]
     if o is None:
         o = torch.optim.Adam(model.parameters(), lr=lr)
-    return o
+    return o, sched
+
+
+def in_train_check(model, ds, n_sections, dev, bn_batch_stats):
+    """Mean per-gene PCC and pred-SD/true-SD on the first n training sections, dropout off.
+    bn_batch_stats=False: plain eval mode (BatchNorm running stats, what test scoring uses).
+    bn_batch_stats=True : BatchNorm uses the section's own batch stats, as in the training pass
+                          (momentum set to 0 so the running stats are not touched).
+    A large gap between the two means the running stats do not fit clean inputs."""
+    model.eval()
+    bns = [m for m in model.modules() if isinstance(m, torch.nn.modules.batchnorm._BatchNorm)]
+    saved = [m.momentum for m in bns]
+    if bn_batch_stats:
+        for m in bns:
+            m.train(); m.momentum = 0.0
+    pccs, sdrs = [], []
+    with torch.no_grad():
+        for k in range(min(n_sections, len(ds))):
+            patch, pos, exp, adj, *_ = ds[k]
+            o = model(patch.unsqueeze(0).to(dev), pos.unsqueeze(0).to(dev), adj.to(dev))
+            p = (o[0] if isinstance(o, (tuple, list)) else o).reshape(-1, exp.shape[1]).double().cpu().numpy()
+            t = exp.double().numpy()
+            ps, ts = p.std(0), t.std(0)
+            ok = (ps > 1e-12) & (ts > 1e-12)
+            pc = ((p - p.mean(0)) * (t - t.mean(0))).mean(0)
+            pccs.append(float(np.mean(pc[ok] / (ps[ok] * ts[ok]))) if ok.any() else float("nan"))
+            sdrs.append(float(np.median(ps[ts > 1e-12] / ts[ts > 1e-12])))
+    for m, mom in zip(bns, saved):
+        m.momentum = mom
+    model.train()
+    return float(np.nanmean(pccs)), float(np.mean(sdrs))
 
 
 def run_fold(args, fold_i, fold_name, tr, te, dev="cuda"):
@@ -54,25 +89,50 @@ def run_fold(args, fold_i, fold_name, tr, te, dev="cuda"):
                     heads=args.heads, channel=args.channel, dropout=args.dropout,
                     zinb=args.zinb, nb=False, bake=args.bake, lamb=args.lamb,
                     policy=args.policy).to(dev)
-    model.log = lambda *a, **k: None
+    # training_step logs 'mse_loss', 'bake_loss', 'zinb_loss' through self.log: collect them,
+    # because the total loss is dominated by the ZINB term and says little about the MSE head.
+    comp = {}
+    model.log = lambda name, val, *a, **k: comp.setdefault(name, []).append(float(val))
     model.log_dict = lambda *a, **k: None
-    opt = get_opt(model, args.lr)
+    opt, sched = get_opt(model, args.lr)
+
+    # MSE of predicting each gene's within-section mean: the level mse_loss must get below
+    base_mse = float(np.mean([ds_tr.data[s]["exp"].var(0).mean() for s in tr]))
+    print(f"  [{fold_name}] norm={C.NORM} mean-prediction MSE {base_mse:.4f} "
+          f"scheduler={'on' if sched is not None else 'off'}", flush=True)
 
     torch.cuda.reset_peak_memory_stats()
-    curve, t0 = [], time.time()
+    curve, rows, t0 = [], [], time.time()
     for ep in range(1, args.epochs + 1):
-        model.train(); tot = 0.0
+        model.train(); tot = 0.0; comp.clear()
         for b in dl_tr:
             b = [x.to(dev) for x in b]
             o = model.training_step(b, 0)
             loss = o["loss"] if isinstance(o, dict) else o
             opt.zero_grad(); loss.backward(); opt.step()
             tot += float(loss)
+        if sched is not None:
+            sched.step()
         curve.append(tot / len(dl_tr))
+        row = dict(epoch=ep, loss=curve[-1], lr=opt.param_groups[0]["lr"],
+                   **{k: float(np.mean(v)) for k, v in comp.items()})
         if ep % args.log_every == 0 or ep == 1:
-            print(f"  [{fold_name}] epoch {ep}/{args.epochs} loss {curve[-1]:.4f} "
-                  f"({(time.time()-t0)/ep:.1f}s/ep)", flush=True)
+            msg = " ".join(f"{k.replace('_loss', '')} {row[k]:.4f}"
+                           for k in ("mse_loss", "zinb_loss", "bake_loss") if k in row)
+            print(f"  [{fold_name}] epoch {ep}/{args.epochs} loss {curve[-1]:.4f} | {msg} "
+                  f"(mean-pred MSE {base_mse:.4f}) ({(time.time()-t0)/ep:.1f}s/ep)", flush=True)
+            if args.check_sections > 0:
+                row["pcc_eval"], row["sdr_eval"] = in_train_check(model, ds_tr, args.check_sections, dev, False)
+                row["pcc_bnbatch"], row["sdr_bnbatch"] = in_train_check(model, ds_tr, args.check_sections, dev, True)
+                print(f"    in-train PCC eval-mode {row['pcc_eval']:+.4f} (sd_ratio {row['sdr_eval']:.3f}) | "
+                      f"BN batch-stats {row['pcc_bnbatch']:+.4f} (sd_ratio {row['sdr_bnbatch']:.3f})", flush=True)
+        rows.append(row)
     train_sec = time.time() - t0
+    keys = sorted({k for r in rows for k in r}, key=lambda k: (k != "epoch", k))
+    with open(out / "loss_components.csv", "w") as fh:
+        fh.write(",".join(keys) + "\n")
+        for r in rows:
+            fh.write(",".join("" if k not in r else f"{r[k]:.6g}" for k in keys) + "\n")
 
     # ---- last-epoch scoring: no epoch selection of any kind ----
     model.eval()
@@ -89,7 +149,8 @@ def run_fold(args, fold_i, fold_name, tr, te, dev="cuda"):
     np.savetxt(out / "loss_curve.csv", np.array(curve), delimiter=",")
     if args.save_ckpt:
         torch.save(model.state_dict(), out / "model.pt")
-    json.dump(dict(fold=fold_name, train=tr, test=te, config=vars(args),
+    json.dump(dict(fold=fold_name, train=tr, test=te, config=vars(args), norm=C.NORM,
+                   mean_pred_mse=base_mse,
                    n_genes=len(panel), train_seconds=round(train_sec, 1),
                    sec_per_epoch=round(train_sec / args.epochs, 2),
                    peak_gpu_gb=round(torch.cuda.max_memory_allocated() / 2**30, 2),
@@ -125,6 +186,8 @@ def main():
                     help="divide pixels by 255 (original repo does not; off by default)")
     ap.add_argument("--save_ckpt", action="store_true")
     ap.add_argument("--log_every", type=int, default=10)
+    ap.add_argument("--check_sections", type=int, default=3,
+                    help="training sections used for the in-train PCC check at each log step (0 = off)")
     args = ap.parse_args()
 
     folds = build_folds(args.cv)

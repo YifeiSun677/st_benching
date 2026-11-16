@@ -45,7 +45,8 @@ def main():
             x1, y1 = min(W, x + C.R), min(H, y + C.R)
             crop = im[y0:y1, x0:x1]
             buf = np.zeros((C.PATCH, C.PATCH, 3), np.uint8)
-            buf[: crop.shape[0], : crop.shape[1]] = crop      # zero-pad at the border (rare)
+            oy, ox = y0 - (y - C.R), x0 - (x - C.R)           # offset when clipped at top/left
+            buf[oy: oy + crop.shape[0], ox: ox + crop.shape[1]] = crop   # zero-pad at the border (rare)
             mm[int(r.row)] = buf
         del im
     mm.flush()

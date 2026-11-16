@@ -17,8 +17,11 @@ R = PATCH // 2       # 56
 PATIENTS = list("ABCDEFGH")
 
 # target normalisation:
-#   "median" = scprep.normalize.library_size_normalize + log10(x+1)  <- Hist2ST/HisToGene original
-#   "cp10k"  = per-row scale to 10000 + log10(x+1)
+#   "cp10k"  = per-row scale to 10000 + log10(x+1)  <- Hist2ST/HisToGene original:
+#              scprep.normalize.library_size_normalize defaults to rescale=10000
+#   "median" = per-row scale to the section's median library size + log10(x+1).
+#              On the sparse 833 panel this gives targets with variance ~0.02, so the MSE
+#              term is swamped by zinb*ZINB and the target scale differs between sections.
 # MUST match whatever your histogene port uses, otherwise MSE / SSE ratio are not
 # comparable across the two models (PCC is unaffected).
-NORM = os.environ.get("HIST2ST_NORM", "median")
+NORM = os.environ.get("HIST2ST_NORM", "cp10k")
