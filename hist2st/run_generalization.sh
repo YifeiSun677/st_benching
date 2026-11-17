@@ -27,8 +27,9 @@ run() {
 
 say "==== Hist2ST generalization, run $RUN ===="
 
-# 0. wait for the A/B re-run (any hist2st.train process) to finish
-while pgrep -f "hist2st\.train" > /dev/null; do sleep 60; done
+# 0. wait for the A/B re-run to finish. Match only the python process itself (command line
+#    starting with python), not shells or tmux clients whose command line merely contains it.
+while pgrep -f "^[^ ]*python[^ ]* -m hist2st\.train" > /dev/null; do sleep 60; done
 say "no training process left"
 for f in fold00_A fold01_B fold02_C fold03_D fold04_E fold05_F fold06_G fold07_H; do
     [ -f "$RUN/$f/model.pt" ] || fail "$RUN/$f/model.pt missing (did the A/B re-run finish?)"
