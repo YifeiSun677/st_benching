@@ -134,3 +134,123 @@ Checks: ridge == scikit-learn Ridge on standardised features; target transforms
 reproduce TRIPLEX / Path2Space / STFlow / DeepPT / HisToGene stored truth;
 scorer reproduces the TRIPLEX headline; end-to-end run on the real counts with
 synthetic features.
+
+## Training-size experiment (ridge vs TRIPLEX as the number of training patients grows)
+
+Question: does the TRIPLEX − ridge gap widen with more training patients? Every
+comparison is within one held-out test patient.
+
+| Piece | Code | Design |
+|---|---|---|
+| subset list (both pipelines read it) | `tsize/manifest.py` → `tsize/manifest.json` | every size-k subset of the other 7 patients, k ∈ {1,2,4,6,7}: 71 per test patient, 568 per config; TRIPLEX: 2 per k ∈ {2,4} for test patients B, C, A, E, drawn (seed 20261117) from the ridge list |
+| ridge | `ridge/run_tsize.py` | 9 configs: UNI local × 5 scales, cigar local + full, resnet50 local, ctranspath local; α fixed to the k = 7 choice per test patient (`k7`) and the per-spot-scaled version (`k7_per_spot` = α·n_train/n_train(k=7)) |
+| TRIPLEX | `triplex/run_tsize.py` (+ `train_patients=` in `train.py`) | 16 runs; hyperparameters checked against `triplex_lopo_833_e20/fold_*/run.json` before training; k = 7 = that run |
+| tables | `tsize/aggregate.py` | tidy table + `by_k.csv`, `paired_gap*.csv`, `k1_matrix*` |
+
+The α values come from the existing k = 7 runs and are already written into
+`tsize/manifest.json`, so the pod only reads that file. Rebuild it only if a k = 7
+run changes: `python -m tsize.manifest --k7-dir ../results_4_models/ridge`.
+
+### 0. Get the code onto the pod
+
+Commit and push on the Mac (including `tsize/manifest.json`), then on the pod:
+
+```bash
+cd /workspace/st_benching && git pull && git log -1 --oneline
+```
+
+### 1. Tests on the pod (CPU, ~5 min)
+
+```bash
+cd /workspace/st_benching && python -m pytest tsize/tests -q
+```
+
+The 9 `test_k7_fixed_alpha_reproduces_stored_run_real[...]` cases must PASS, not
+skip: they refit every config at k = 7 with the stored α on the real features and
+compare against `/workspace/ridge_results/<tag>` (preds to 1e-5, per-gene PCC to
+1e-6). A skip means a feature file or k = 7 run is missing. (The TRIPLEX dry-run
+test skips on the pod; step 3a does the same check against the real index.)
+
+### 2. Ridge (CPU, about 1 h for all 9 configs; resumable)
+
+```bash
+cd /workspace/st_benching && nohup python -m ridge.run_tsize > /workspace/tsize_ridge.log 2>&1 &
+```
+```bash
+tail -f /workspace/tsize_ridge.log
+```
+```bash
+python -m ridge.run_tsize --status
+```
+
+Measured cost per fit: ~0.3 s at d = 1024 (UNI), ~1.3 s at d = 2048 (resnet50), ~1 s
+for cigar full (its global PCA is refitted per subset). Roughly: UNI 5 × ~4 min,
+cigar local ~1 min, cigar full ~10 min, resnet50 ~15 min, ctranspath ~3 min.
+If it is interrupted, run the same command again; finished fits are skipped.
+Output: `/workspace/ridge_results/tsize/<tag>/<test>/<subset_id>.csv.gz`
+(9 × 568 = 5,112 files).
+
+### 3. TRIPLEX (GPU, 16 runs, about 1–1.5 h; resumable)
+
+On a fresh pod, first re-do run.sh's setup steps only (deps + weights link), not its training:
+
+```bash
+cd /workspace/st_benching && export TRIPLEX_REPO=/workspace/TRIPLEX CIGAR_CKPT=/workspace/weights/cigar/tenpercent_resnet18.ckpt
+```
+```bash
+pip install --no-input -r triplex/requirements-triplex.txt && mkdir -p weights/cigar && ln -sfn "$CIGAR_CKPT" weights/cigar/tenpercent_resnet18.ckpt
+```
+
+3a. Dry run: prints each run's split, spot count, share of the k = 7 data and
+optimizer steps; refuses to continue if any hyperparameter differs from the e20 run.
+
+```bash
+python -m triplex.run_tsize --dry-run
+```
+
+3b. Train (k = 7 folds took 9–10 min for 20 epochs; k = 2 ≈ 3 min, k = 4 ≈ 6 min):
+
+```bash
+nohup python -m triplex.run_tsize > /workspace/tsize_triplex.log 2>&1 &
+```
+```bash
+tail -f /workspace/tsize_triplex.log
+```
+
+If it is interrupted, run the same command again: finished runs (final.pt + preds)
+are skipped, and a half-finished run continues from its resume.pt (every 10 epochs).
+Output: `/workspace/triplex_results/triplex_tsize_<subset_id>/fold_<test>/`.
+Each `run.json` records `train_patients`, `n_train_spots`, `steps_per_epoch` and
+`total_steps`. With the epoch count fixed at 20, k = 2 gets about 2/7 of the steps
+of k = 7, so check those numbers when reading the gap.
+
+### 4. Aggregate (CPU, ~2 min) and pull to the Mac
+
+```bash
+cd /workspace/st_benching && python -m tsize.aggregate
+```
+
+This writes `/workspace/ridge_results/tsize_summary/` and prints the TRIPLEX − ridge(cigar)
+gap per test patient and k. On the Mac (from `~/Documents/science`; use the pod's
+current IP and port):
+
+```bash
+scp -r -P <port> -i ~/.ssh/id_ed25519 'root@<ip>:/workspace/ridge_results/tsize_summary' results_4_models/
+```
+```bash
+scp -r -P <port> -i ~/.ssh/id_ed25519 'root@<ip>:/workspace/ridge_results/tsize' results_4_models/ridge_tsize
+```
+```bash
+scp -r -P <port> -i ~/.ssh/id_ed25519 'root@<ip>:/workspace/triplex_results/triplex_tsize_*' results_4_models/triplex/
+```
+
+Check the copy, then optionally re-aggregate locally (same output):
+
+```bash
+find results_4_models/ridge_tsize -name '*.csv.gz' | wc -l; ls -d results_4_models/triplex/triplex_tsize_* | wc -l
+```
+```bash
+cd st_benching && python -m tsize.aggregate --ridge-dir ../results_4_models/ridge_tsize --triplex-dir ../results_4_models/triplex --out ../results_4_models/tsize_summary
+```
+
+Expected: 5112 and 16.

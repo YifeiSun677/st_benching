@@ -79,7 +79,7 @@ def _heldout_pcc(model, test_ds, test_sections, device):
 
 
 def train_fold(patient, tag, epochs=None, lr=None, batch_size=None, device=None,
-               probe_every=0, resume=False):
+               probe_every=0, resume=False, train_patients=None):
     epochs = epochs or config.EPOCHS
     lr = lr or config.LR
     batch_size = batch_size or config.BATCH_SIZE
@@ -90,9 +90,10 @@ def train_fold(patient, tag, epochs=None, lr=None, batch_size=None, device=None,
 
     panel = her2st.load_panel()
     index_df = her2st.load_spot_index()
-    test_sections = her2st.sections_for_patient(index_df, patient)
-    train_sections = [s for s in her2st.all_sections(index_df)
-                      if s not in test_sections]
+    # train_patients=None -> standard LOPO (all 7 others); a list -> only those
+    # patients (training-size experiment). Everything else is unchanged.
+    train_sections, test_sections = her2st.split_sections(index_df, patient, train_patients)
+    train_patients = sorted({s[0] for s in train_sections})
 
     print(f"[fold {patient}] train {len(train_sections)} sections, "
           f"test {len(test_sections)} sections")
@@ -118,6 +119,7 @@ def train_fold(patient, tag, epochs=None, lr=None, batch_size=None, device=None,
     meta = dict(patient=patient, tag=tag, epochs=epochs, lr=lr, batch_size=batch_size,
                 cpm=config.CPM, smooth=config.SMOOTH, freeze_target=config.FREEZE_TARGET,
                 model_kwargs=config.MODEL_KWARGS, seed=config.SEED,
+                train_patients=train_patients,
                 train_sections=train_sections, test_sections=test_sections)
 
     start_ep = 0
@@ -197,7 +199,10 @@ def train_fold(patient, tag, epochs=None, lr=None, batch_size=None, device=None,
                batch_size=batch_size, cpm=config.CPM, smooth=config.SMOOTH,
                freeze_target=config.FREEZE_TARGET, pos_layer=config.POS_LAYER,
                res_neighbor=list(config.RES_NEIGHBOR),
+               train_patients=train_patients,
                train_sections=train_sections, test_sections=test_sections,
+               n_train_spots=len(train_ds),
+               steps_per_epoch=len(loader), total_steps=len(loader) * epochs,
                train_loss_last=per_epoch[-1], seconds_total=time.time() - t0)
     if probe_curve:
         run["heldout_probe"] = probe_curve
@@ -229,6 +234,9 @@ if __name__ == "__main__":
                          "does not affect final last-epoch scoring)")
     ap.add_argument("--resume", action="store_true",
                     help="continue from CKPT_DIR/<tag>/fold_<patient>/resume.pt if present")
+    ap.add_argument("--train_patients", nargs="+", default=None,
+                    help="train only on these patients (default: all except --patient)")
     a = ap.parse_args()
     train_fold(a.patient, a.tag, epochs=a.epochs, lr=a.lr,
-               batch_size=a.batch_size, probe_every=a.probe_every, resume=a.resume)
+               batch_size=a.batch_size, probe_every=a.probe_every, resume=a.resume,
+               train_patients=a.train_patients)

@@ -1,0 +1,6253 @@
+{
+ "seed": 20261117,
+ "patients": [
+  "A",
+  "B",
+  "C",
+  "D",
+  "E",
+  "F",
+  "G",
+  "H"
+ ],
+ "ks": [
+  1,
+  2,
+  4,
+  6,
+  7
+ ],
+ "alpha_modes": {
+  "k7": "alpha fixed to the k = 7 inner-LOPO choice for this test patient",
+  "k7_per_spot": "k7 alpha * n_train_spots(subset) / n_train_spots(all 7 others); same penalty per training spot (identical to k7 at k = 7)"
+ },
+ "ridge_configs": [
+  {
+   "tag": "ridge_uni_hest112_local_cpm_panel_ln",
+   "source": "uni_hest112",
+   "context": "local",
+   "target": "cpm_panel_ln",
+   "k7_tag": "ridge_uni_hest112_local_cpm_panel_ln",
+   "alpha_k7": {
+    "A": 3000000.0,
+    "B": 300000.0,
+    "C": 1000000.0,
+    "D": 300000.0,
+    "E": 1000000.0,
+    "F": 100000000.0,
+    "G": 1000000.0,
+    "H": 300000.0
+   }
+  },
+  {
+   "tag": "ridge_uni_hest112_local_cp10k_full_log10",
+   "source": "uni_hest112",
+   "context": "local",
+   "target": "cp10k_full_log10",
+   "k7_tag": "ridge_uni_hest112_local_cp10k_full_log10",
+   "alpha_k7": {
+    "A": 300000.0,
+    "B": 300000.0,
+    "C": 300000.0,
+    "D": 300000.0,
+    "E": 300000.0,
+    "F": 300000.0,
+    "G": 300000.0,
+    "H": 300000.0
+   }
+  },
+  {
+   "tag": "ridge_uni_hest112_local_cp10k_panel_log10",
+   "source": "uni_hest112",
+   "context": "local",
+   "target": "cp10k_panel_log10",
+   "k7_tag": "ridge_uni_hest112_local_cp10k_panel_log10",
+   "alpha_k7": {
+    "A": 1000000.0,
+    "B": 300000.0,
+    "C": 1000000.0,
+    "D": 300000.0,
+    "E": 1000000.0,
+    "F": 10000000.0,
+    "G": 300000.0,
+    "H": 300000.0
+   }
+  },
+  {
+   "tag": "ridge_uni_hest112_local_mediannorm_panel_ln",
+   "source": "uni_hest112",
+   "context": "local",
+   "target": "mediannorm_panel_ln",
+   "k7_tag": "ridge_uni_hest112_local_mediannorm_panel_ln",
+   "alpha_k7": {
+    "A": 1000000.0,
+    "B": 300000.0,
+    "C": 10000000.0,
+    "D": 100000000.0,
+    "E": 100000000.0,
+    "F": 100000000.0,
+    "G": 100000000.0,
+    "H": 1000000.0
+   }
+  },
+  {
+   "tag": "ridge_uni_hest112_local_raw_ln",
+   "source": "uni_hest112",
+   "context": "local",
+   "target": "raw_ln",
+   "k7_tag": "ridge_uni_hest112_local_raw_ln",
+   "alpha_k7": {
+    "A": 100000000.0,
+    "B": 300000.0,
+    "C": 3000000.0,
+    "D": 300000.0,
+    "E": 3000000.0,
+    "F": 100000000.0,
+    "G": 1000000.0,
+    "H": 300000.0
+   }
+  },
+  {
+   "tag": "ridge_cigar_local_cpm_panel_ln",
+   "source": "cigar",
+   "context": "local",
+   "target": "cpm_panel_ln",
+   "k7_tag": "ridge_cigar_local_cpm_panel_ln",
+   "alpha_k7": {
+    "A": 100000000.0,
+    "B": 100000.0,
+    "C": 300000.0,
+    "D": 100000.0,
+    "E": 100000000.0,
+    "F": 100000000.0,
+    "G": 300000.0,
+    "H": 100000.0
+   }
+  },
+  {
+   "tag": "ridge_cigar_full_cpm_panel_ln",
+   "source": "cigar",
+   "context": "full",
+   "target": "cpm_panel_ln",
+   "k7_tag": "ridge_cigar_full_cpm_panel_ln",
+   "alpha_k7": {
+    "A": 100000.0,
+    "B": 100000.0,
+    "C": 100000.0,
+    "D": 100000.0,
+    "E": 100000.0,
+    "F": 100000.0,
+    "G": 100000.0,
+    "H": 100000.0
+   }
+  },
+  {
+   "tag": "ridge_resnet50_local_cp10k_full_log10",
+   "source": "resnet50",
+   "context": "local",
+   "target": "cp10k_full_log10",
+   "k7_tag": "ridge_resnet50_local_cp10k_full_log10",
+   "alpha_k7": {
+    "A": 300000.0,
+    "B": 300000.0,
+    "C": 300000.0,
+    "D": 300000.0,
+    "E": 300000.0,
+    "F": 300000.0,
+    "G": 300000.0,
+    "H": 300000.0
+   }
+  },
+  {
+   "tag": "ridge_ctranspath_local_mediannorm_panel_ln",
+   "source": "ctranspath",
+   "context": "local",
+   "target": "mediannorm_panel_ln",
+   "k7_tag": "ridge_ctranspath_local_mediannorm_panel_ln",
+   "alpha_k7": {
+    "A": 100000.0,
+    "B": 100000.0,
+    "C": 300000.0,
+    "D": 300000.0,
+    "E": 100000000.0,
+    "F": 100000000.0,
+    "G": 300000.0,
+    "H": 300000.0
+   }
+  }
+ ],
+ "ridge_subsets": [
+  {
+   "subset_id": "A_B",
+   "test": "A",
+   "k": 1,
+   "train": [
+    "B"
+   ]
+  },
+  {
+   "subset_id": "A_C",
+   "test": "A",
+   "k": 1,
+   "train": [
+    "C"
+   ]
+  },
+  {
+   "subset_id": "A_D",
+   "test": "A",
+   "k": 1,
+   "train": [
+    "D"
+   ]
+  },
+  {
+   "subset_id": "A_E",
+   "test": "A",
+   "k": 1,
+   "train": [
+    "E"
+   ]
+  },
+  {
+   "subset_id": "A_F",
+   "test": "A",
+   "k": 1,
+   "train": [
+    "F"
+   ]
+  },
+  {
+   "subset_id": "A_G",
+   "test": "A",
+   "k": 1,
+   "train": [
+    "G"
+   ]
+  },
+  {
+   "subset_id": "A_H",
+   "test": "A",
+   "k": 1,
+   "train": [
+    "H"
+   ]
+  },
+  {
+   "subset_id": "A_BC",
+   "test": "A",
+   "k": 2,
+   "train": [
+    "B",
+    "C"
+   ]
+  },
+  {
+   "subset_id": "A_BD",
+   "test": "A",
+   "k": 2,
+   "train": [
+    "B",
+    "D"
+   ]
+  },
+  {
+   "subset_id": "A_BE",
+   "test": "A",
+   "k": 2,
+   "train": [
+    "B",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "A_BF",
+   "test": "A",
+   "k": 2,
+   "train": [
+    "B",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "A_BG",
+   "test": "A",
+   "k": 2,
+   "train": [
+    "B",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "A_BH",
+   "test": "A",
+   "k": 2,
+   "train": [
+    "B",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "A_CD",
+   "test": "A",
+   "k": 2,
+   "train": [
+    "C",
+    "D"
+   ]
+  },
+  {
+   "subset_id": "A_CE",
+   "test": "A",
+   "k": 2,
+   "train": [
+    "C",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "A_CF",
+   "test": "A",
+   "k": 2,
+   "train": [
+    "C",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "A_CG",
+   "test": "A",
+   "k": 2,
+   "train": [
+    "C",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "A_CH",
+   "test": "A",
+   "k": 2,
+   "train": [
+    "C",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "A_DE",
+   "test": "A",
+   "k": 2,
+   "train": [
+    "D",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "A_DF",
+   "test": "A",
+   "k": 2,
+   "train": [
+    "D",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "A_DG",
+   "test": "A",
+   "k": 2,
+   "train": [
+    "D",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "A_DH",
+   "test": "A",
+   "k": 2,
+   "train": [
+    "D",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "A_EF",
+   "test": "A",
+   "k": 2,
+   "train": [
+    "E",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "A_EG",
+   "test": "A",
+   "k": 2,
+   "train": [
+    "E",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "A_EH",
+   "test": "A",
+   "k": 2,
+   "train": [
+    "E",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "A_FG",
+   "test": "A",
+   "k": 2,
+   "train": [
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "A_FH",
+   "test": "A",
+   "k": 2,
+   "train": [
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "A_GH",
+   "test": "A",
+   "k": 2,
+   "train": [
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "A_BCDE",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "D",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "A_BCDF",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "D",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "A_BCDG",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "D",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "A_BCDH",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "D",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "A_BCEF",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "E",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "A_BCEG",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "E",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "A_BCEH",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "E",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "A_BCFG",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "A_BCFH",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "A_BCGH",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "A_BDEF",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "B",
+    "D",
+    "E",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "A_BDEG",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "B",
+    "D",
+    "E",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "A_BDEH",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "B",
+    "D",
+    "E",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "A_BDFG",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "B",
+    "D",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "A_BDFH",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "B",
+    "D",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "A_BDGH",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "B",
+    "D",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "A_BEFG",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "B",
+    "E",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "A_BEFH",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "B",
+    "E",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "A_BEGH",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "B",
+    "E",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "A_BFGH",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "B",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "A_CDEF",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "C",
+    "D",
+    "E",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "A_CDEG",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "C",
+    "D",
+    "E",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "A_CDEH",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "C",
+    "D",
+    "E",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "A_CDFG",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "C",
+    "D",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "A_CDFH",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "C",
+    "D",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "A_CDGH",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "C",
+    "D",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "A_CEFG",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "C",
+    "E",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "A_CEFH",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "C",
+    "E",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "A_CEGH",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "C",
+    "E",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "A_CFGH",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "C",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "A_DEFG",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "D",
+    "E",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "A_DEFH",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "D",
+    "E",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "A_DEGH",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "D",
+    "E",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "A_DFGH",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "D",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "A_EFGH",
+   "test": "A",
+   "k": 4,
+   "train": [
+    "E",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "A_BCDEFG",
+   "test": "A",
+   "k": 6,
+   "train": [
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "A_BCDEFH",
+   "test": "A",
+   "k": 6,
+   "train": [
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "A_BCDEGH",
+   "test": "A",
+   "k": 6,
+   "train": [
+    "B",
+    "C",
+    "D",
+    "E",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "A_BCDFGH",
+   "test": "A",
+   "k": 6,
+   "train": [
+    "B",
+    "C",
+    "D",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "A_BCEFGH",
+   "test": "A",
+   "k": 6,
+   "train": [
+    "B",
+    "C",
+    "E",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "A_BDEFGH",
+   "test": "A",
+   "k": 6,
+   "train": [
+    "B",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "A_CDEFGH",
+   "test": "A",
+   "k": 6,
+   "train": [
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "A_BCDEFGH",
+   "test": "A",
+   "k": 7,
+   "train": [
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "B_A",
+   "test": "B",
+   "k": 1,
+   "train": [
+    "A"
+   ]
+  },
+  {
+   "subset_id": "B_C",
+   "test": "B",
+   "k": 1,
+   "train": [
+    "C"
+   ]
+  },
+  {
+   "subset_id": "B_D",
+   "test": "B",
+   "k": 1,
+   "train": [
+    "D"
+   ]
+  },
+  {
+   "subset_id": "B_E",
+   "test": "B",
+   "k": 1,
+   "train": [
+    "E"
+   ]
+  },
+  {
+   "subset_id": "B_F",
+   "test": "B",
+   "k": 1,
+   "train": [
+    "F"
+   ]
+  },
+  {
+   "subset_id": "B_G",
+   "test": "B",
+   "k": 1,
+   "train": [
+    "G"
+   ]
+  },
+  {
+   "subset_id": "B_H",
+   "test": "B",
+   "k": 1,
+   "train": [
+    "H"
+   ]
+  },
+  {
+   "subset_id": "B_AC",
+   "test": "B",
+   "k": 2,
+   "train": [
+    "A",
+    "C"
+   ]
+  },
+  {
+   "subset_id": "B_AD",
+   "test": "B",
+   "k": 2,
+   "train": [
+    "A",
+    "D"
+   ]
+  },
+  {
+   "subset_id": "B_AE",
+   "test": "B",
+   "k": 2,
+   "train": [
+    "A",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "B_AF",
+   "test": "B",
+   "k": 2,
+   "train": [
+    "A",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "B_AG",
+   "test": "B",
+   "k": 2,
+   "train": [
+    "A",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "B_AH",
+   "test": "B",
+   "k": 2,
+   "train": [
+    "A",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "B_CD",
+   "test": "B",
+   "k": 2,
+   "train": [
+    "C",
+    "D"
+   ]
+  },
+  {
+   "subset_id": "B_CE",
+   "test": "B",
+   "k": 2,
+   "train": [
+    "C",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "B_CF",
+   "test": "B",
+   "k": 2,
+   "train": [
+    "C",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "B_CG",
+   "test": "B",
+   "k": 2,
+   "train": [
+    "C",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "B_CH",
+   "test": "B",
+   "k": 2,
+   "train": [
+    "C",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "B_DE",
+   "test": "B",
+   "k": 2,
+   "train": [
+    "D",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "B_DF",
+   "test": "B",
+   "k": 2,
+   "train": [
+    "D",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "B_DG",
+   "test": "B",
+   "k": 2,
+   "train": [
+    "D",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "B_DH",
+   "test": "B",
+   "k": 2,
+   "train": [
+    "D",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "B_EF",
+   "test": "B",
+   "k": 2,
+   "train": [
+    "E",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "B_EG",
+   "test": "B",
+   "k": 2,
+   "train": [
+    "E",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "B_EH",
+   "test": "B",
+   "k": 2,
+   "train": [
+    "E",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "B_FG",
+   "test": "B",
+   "k": 2,
+   "train": [
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "B_FH",
+   "test": "B",
+   "k": 2,
+   "train": [
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "B_GH",
+   "test": "B",
+   "k": 2,
+   "train": [
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "B_ACDE",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "D",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "B_ACDF",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "D",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "B_ACDG",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "D",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "B_ACDH",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "D",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "B_ACEF",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "E",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "B_ACEG",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "E",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "B_ACEH",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "E",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "B_ACFG",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "B_ACFH",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "B_ACGH",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "B_ADEF",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "A",
+    "D",
+    "E",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "B_ADEG",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "A",
+    "D",
+    "E",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "B_ADEH",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "A",
+    "D",
+    "E",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "B_ADFG",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "A",
+    "D",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "B_ADFH",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "A",
+    "D",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "B_ADGH",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "A",
+    "D",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "B_AEFG",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "A",
+    "E",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "B_AEFH",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "A",
+    "E",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "B_AEGH",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "A",
+    "E",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "B_AFGH",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "A",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "B_CDEF",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "C",
+    "D",
+    "E",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "B_CDEG",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "C",
+    "D",
+    "E",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "B_CDEH",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "C",
+    "D",
+    "E",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "B_CDFG",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "C",
+    "D",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "B_CDFH",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "C",
+    "D",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "B_CDGH",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "C",
+    "D",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "B_CEFG",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "C",
+    "E",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "B_CEFH",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "C",
+    "E",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "B_CEGH",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "C",
+    "E",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "B_CFGH",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "C",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "B_DEFG",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "D",
+    "E",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "B_DEFH",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "D",
+    "E",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "B_DEGH",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "D",
+    "E",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "B_DFGH",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "D",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "B_EFGH",
+   "test": "B",
+   "k": 4,
+   "train": [
+    "E",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "B_ACDEFG",
+   "test": "B",
+   "k": 6,
+   "train": [
+    "A",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "B_ACDEFH",
+   "test": "B",
+   "k": 6,
+   "train": [
+    "A",
+    "C",
+    "D",
+    "E",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "B_ACDEGH",
+   "test": "B",
+   "k": 6,
+   "train": [
+    "A",
+    "C",
+    "D",
+    "E",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "B_ACDFGH",
+   "test": "B",
+   "k": 6,
+   "train": [
+    "A",
+    "C",
+    "D",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "B_ACEFGH",
+   "test": "B",
+   "k": 6,
+   "train": [
+    "A",
+    "C",
+    "E",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "B_ADEFGH",
+   "test": "B",
+   "k": 6,
+   "train": [
+    "A",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "B_CDEFGH",
+   "test": "B",
+   "k": 6,
+   "train": [
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "B_ACDEFGH",
+   "test": "B",
+   "k": 7,
+   "train": [
+    "A",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "C_A",
+   "test": "C",
+   "k": 1,
+   "train": [
+    "A"
+   ]
+  },
+  {
+   "subset_id": "C_B",
+   "test": "C",
+   "k": 1,
+   "train": [
+    "B"
+   ]
+  },
+  {
+   "subset_id": "C_D",
+   "test": "C",
+   "k": 1,
+   "train": [
+    "D"
+   ]
+  },
+  {
+   "subset_id": "C_E",
+   "test": "C",
+   "k": 1,
+   "train": [
+    "E"
+   ]
+  },
+  {
+   "subset_id": "C_F",
+   "test": "C",
+   "k": 1,
+   "train": [
+    "F"
+   ]
+  },
+  {
+   "subset_id": "C_G",
+   "test": "C",
+   "k": 1,
+   "train": [
+    "G"
+   ]
+  },
+  {
+   "subset_id": "C_H",
+   "test": "C",
+   "k": 1,
+   "train": [
+    "H"
+   ]
+  },
+  {
+   "subset_id": "C_AB",
+   "test": "C",
+   "k": 2,
+   "train": [
+    "A",
+    "B"
+   ]
+  },
+  {
+   "subset_id": "C_AD",
+   "test": "C",
+   "k": 2,
+   "train": [
+    "A",
+    "D"
+   ]
+  },
+  {
+   "subset_id": "C_AE",
+   "test": "C",
+   "k": 2,
+   "train": [
+    "A",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "C_AF",
+   "test": "C",
+   "k": 2,
+   "train": [
+    "A",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "C_AG",
+   "test": "C",
+   "k": 2,
+   "train": [
+    "A",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "C_AH",
+   "test": "C",
+   "k": 2,
+   "train": [
+    "A",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "C_BD",
+   "test": "C",
+   "k": 2,
+   "train": [
+    "B",
+    "D"
+   ]
+  },
+  {
+   "subset_id": "C_BE",
+   "test": "C",
+   "k": 2,
+   "train": [
+    "B",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "C_BF",
+   "test": "C",
+   "k": 2,
+   "train": [
+    "B",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "C_BG",
+   "test": "C",
+   "k": 2,
+   "train": [
+    "B",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "C_BH",
+   "test": "C",
+   "k": 2,
+   "train": [
+    "B",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "C_DE",
+   "test": "C",
+   "k": 2,
+   "train": [
+    "D",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "C_DF",
+   "test": "C",
+   "k": 2,
+   "train": [
+    "D",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "C_DG",
+   "test": "C",
+   "k": 2,
+   "train": [
+    "D",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "C_DH",
+   "test": "C",
+   "k": 2,
+   "train": [
+    "D",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "C_EF",
+   "test": "C",
+   "k": 2,
+   "train": [
+    "E",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "C_EG",
+   "test": "C",
+   "k": 2,
+   "train": [
+    "E",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "C_EH",
+   "test": "C",
+   "k": 2,
+   "train": [
+    "E",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "C_FG",
+   "test": "C",
+   "k": 2,
+   "train": [
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "C_FH",
+   "test": "C",
+   "k": 2,
+   "train": [
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "C_GH",
+   "test": "C",
+   "k": 2,
+   "train": [
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "C_ABDE",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "D",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "C_ABDF",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "D",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "C_ABDG",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "D",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "C_ABDH",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "D",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "C_ABEF",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "E",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "C_ABEG",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "E",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "C_ABEH",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "E",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "C_ABFG",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "C_ABFH",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "C_ABGH",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "C_ADEF",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "A",
+    "D",
+    "E",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "C_ADEG",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "A",
+    "D",
+    "E",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "C_ADEH",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "A",
+    "D",
+    "E",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "C_ADFG",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "A",
+    "D",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "C_ADFH",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "A",
+    "D",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "C_ADGH",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "A",
+    "D",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "C_AEFG",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "A",
+    "E",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "C_AEFH",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "A",
+    "E",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "C_AEGH",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "A",
+    "E",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "C_AFGH",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "A",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "C_BDEF",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "B",
+    "D",
+    "E",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "C_BDEG",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "B",
+    "D",
+    "E",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "C_BDEH",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "B",
+    "D",
+    "E",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "C_BDFG",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "B",
+    "D",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "C_BDFH",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "B",
+    "D",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "C_BDGH",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "B",
+    "D",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "C_BEFG",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "B",
+    "E",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "C_BEFH",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "B",
+    "E",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "C_BEGH",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "B",
+    "E",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "C_BFGH",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "B",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "C_DEFG",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "D",
+    "E",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "C_DEFH",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "D",
+    "E",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "C_DEGH",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "D",
+    "E",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "C_DFGH",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "D",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "C_EFGH",
+   "test": "C",
+   "k": 4,
+   "train": [
+    "E",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "C_ABDEFG",
+   "test": "C",
+   "k": 6,
+   "train": [
+    "A",
+    "B",
+    "D",
+    "E",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "C_ABDEFH",
+   "test": "C",
+   "k": 6,
+   "train": [
+    "A",
+    "B",
+    "D",
+    "E",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "C_ABDEGH",
+   "test": "C",
+   "k": 6,
+   "train": [
+    "A",
+    "B",
+    "D",
+    "E",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "C_ABDFGH",
+   "test": "C",
+   "k": 6,
+   "train": [
+    "A",
+    "B",
+    "D",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "C_ABEFGH",
+   "test": "C",
+   "k": 6,
+   "train": [
+    "A",
+    "B",
+    "E",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "C_ADEFGH",
+   "test": "C",
+   "k": 6,
+   "train": [
+    "A",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "C_BDEFGH",
+   "test": "C",
+   "k": 6,
+   "train": [
+    "B",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "C_ABDEFGH",
+   "test": "C",
+   "k": 7,
+   "train": [
+    "A",
+    "B",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "D_A",
+   "test": "D",
+   "k": 1,
+   "train": [
+    "A"
+   ]
+  },
+  {
+   "subset_id": "D_B",
+   "test": "D",
+   "k": 1,
+   "train": [
+    "B"
+   ]
+  },
+  {
+   "subset_id": "D_C",
+   "test": "D",
+   "k": 1,
+   "train": [
+    "C"
+   ]
+  },
+  {
+   "subset_id": "D_E",
+   "test": "D",
+   "k": 1,
+   "train": [
+    "E"
+   ]
+  },
+  {
+   "subset_id": "D_F",
+   "test": "D",
+   "k": 1,
+   "train": [
+    "F"
+   ]
+  },
+  {
+   "subset_id": "D_G",
+   "test": "D",
+   "k": 1,
+   "train": [
+    "G"
+   ]
+  },
+  {
+   "subset_id": "D_H",
+   "test": "D",
+   "k": 1,
+   "train": [
+    "H"
+   ]
+  },
+  {
+   "subset_id": "D_AB",
+   "test": "D",
+   "k": 2,
+   "train": [
+    "A",
+    "B"
+   ]
+  },
+  {
+   "subset_id": "D_AC",
+   "test": "D",
+   "k": 2,
+   "train": [
+    "A",
+    "C"
+   ]
+  },
+  {
+   "subset_id": "D_AE",
+   "test": "D",
+   "k": 2,
+   "train": [
+    "A",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "D_AF",
+   "test": "D",
+   "k": 2,
+   "train": [
+    "A",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "D_AG",
+   "test": "D",
+   "k": 2,
+   "train": [
+    "A",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "D_AH",
+   "test": "D",
+   "k": 2,
+   "train": [
+    "A",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "D_BC",
+   "test": "D",
+   "k": 2,
+   "train": [
+    "B",
+    "C"
+   ]
+  },
+  {
+   "subset_id": "D_BE",
+   "test": "D",
+   "k": 2,
+   "train": [
+    "B",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "D_BF",
+   "test": "D",
+   "k": 2,
+   "train": [
+    "B",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "D_BG",
+   "test": "D",
+   "k": 2,
+   "train": [
+    "B",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "D_BH",
+   "test": "D",
+   "k": 2,
+   "train": [
+    "B",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "D_CE",
+   "test": "D",
+   "k": 2,
+   "train": [
+    "C",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "D_CF",
+   "test": "D",
+   "k": 2,
+   "train": [
+    "C",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "D_CG",
+   "test": "D",
+   "k": 2,
+   "train": [
+    "C",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "D_CH",
+   "test": "D",
+   "k": 2,
+   "train": [
+    "C",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "D_EF",
+   "test": "D",
+   "k": 2,
+   "train": [
+    "E",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "D_EG",
+   "test": "D",
+   "k": 2,
+   "train": [
+    "E",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "D_EH",
+   "test": "D",
+   "k": 2,
+   "train": [
+    "E",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "D_FG",
+   "test": "D",
+   "k": 2,
+   "train": [
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "D_FH",
+   "test": "D",
+   "k": 2,
+   "train": [
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "D_GH",
+   "test": "D",
+   "k": 2,
+   "train": [
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "D_ABCE",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "D_ABCF",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "D_ABCG",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "D_ABCH",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "D_ABEF",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "E",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "D_ABEG",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "E",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "D_ABEH",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "E",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "D_ABFG",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "D_ABFH",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "D_ABGH",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "D_ACEF",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "E",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "D_ACEG",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "E",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "D_ACEH",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "E",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "D_ACFG",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "D_ACFH",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "D_ACGH",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "D_AEFG",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "A",
+    "E",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "D_AEFH",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "A",
+    "E",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "D_AEGH",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "A",
+    "E",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "D_AFGH",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "A",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "D_BCEF",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "E",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "D_BCEG",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "E",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "D_BCEH",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "E",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "D_BCFG",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "D_BCFH",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "D_BCGH",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "D_BEFG",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "B",
+    "E",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "D_BEFH",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "B",
+    "E",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "D_BEGH",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "B",
+    "E",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "D_BFGH",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "B",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "D_CEFG",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "C",
+    "E",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "D_CEFH",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "C",
+    "E",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "D_CEGH",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "C",
+    "E",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "D_CFGH",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "C",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "D_EFGH",
+   "test": "D",
+   "k": 4,
+   "train": [
+    "E",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "D_ABCEFG",
+   "test": "D",
+   "k": 6,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "E",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "D_ABCEFH",
+   "test": "D",
+   "k": 6,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "E",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "D_ABCEGH",
+   "test": "D",
+   "k": 6,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "E",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "D_ABCFGH",
+   "test": "D",
+   "k": 6,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "D_ABEFGH",
+   "test": "D",
+   "k": 6,
+   "train": [
+    "A",
+    "B",
+    "E",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "D_ACEFGH",
+   "test": "D",
+   "k": 6,
+   "train": [
+    "A",
+    "C",
+    "E",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "D_BCEFGH",
+   "test": "D",
+   "k": 6,
+   "train": [
+    "B",
+    "C",
+    "E",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "D_ABCEFGH",
+   "test": "D",
+   "k": 7,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "E",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "E_A",
+   "test": "E",
+   "k": 1,
+   "train": [
+    "A"
+   ]
+  },
+  {
+   "subset_id": "E_B",
+   "test": "E",
+   "k": 1,
+   "train": [
+    "B"
+   ]
+  },
+  {
+   "subset_id": "E_C",
+   "test": "E",
+   "k": 1,
+   "train": [
+    "C"
+   ]
+  },
+  {
+   "subset_id": "E_D",
+   "test": "E",
+   "k": 1,
+   "train": [
+    "D"
+   ]
+  },
+  {
+   "subset_id": "E_F",
+   "test": "E",
+   "k": 1,
+   "train": [
+    "F"
+   ]
+  },
+  {
+   "subset_id": "E_G",
+   "test": "E",
+   "k": 1,
+   "train": [
+    "G"
+   ]
+  },
+  {
+   "subset_id": "E_H",
+   "test": "E",
+   "k": 1,
+   "train": [
+    "H"
+   ]
+  },
+  {
+   "subset_id": "E_AB",
+   "test": "E",
+   "k": 2,
+   "train": [
+    "A",
+    "B"
+   ]
+  },
+  {
+   "subset_id": "E_AC",
+   "test": "E",
+   "k": 2,
+   "train": [
+    "A",
+    "C"
+   ]
+  },
+  {
+   "subset_id": "E_AD",
+   "test": "E",
+   "k": 2,
+   "train": [
+    "A",
+    "D"
+   ]
+  },
+  {
+   "subset_id": "E_AF",
+   "test": "E",
+   "k": 2,
+   "train": [
+    "A",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "E_AG",
+   "test": "E",
+   "k": 2,
+   "train": [
+    "A",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "E_AH",
+   "test": "E",
+   "k": 2,
+   "train": [
+    "A",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "E_BC",
+   "test": "E",
+   "k": 2,
+   "train": [
+    "B",
+    "C"
+   ]
+  },
+  {
+   "subset_id": "E_BD",
+   "test": "E",
+   "k": 2,
+   "train": [
+    "B",
+    "D"
+   ]
+  },
+  {
+   "subset_id": "E_BF",
+   "test": "E",
+   "k": 2,
+   "train": [
+    "B",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "E_BG",
+   "test": "E",
+   "k": 2,
+   "train": [
+    "B",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "E_BH",
+   "test": "E",
+   "k": 2,
+   "train": [
+    "B",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "E_CD",
+   "test": "E",
+   "k": 2,
+   "train": [
+    "C",
+    "D"
+   ]
+  },
+  {
+   "subset_id": "E_CF",
+   "test": "E",
+   "k": 2,
+   "train": [
+    "C",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "E_CG",
+   "test": "E",
+   "k": 2,
+   "train": [
+    "C",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "E_CH",
+   "test": "E",
+   "k": 2,
+   "train": [
+    "C",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "E_DF",
+   "test": "E",
+   "k": 2,
+   "train": [
+    "D",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "E_DG",
+   "test": "E",
+   "k": 2,
+   "train": [
+    "D",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "E_DH",
+   "test": "E",
+   "k": 2,
+   "train": [
+    "D",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "E_FG",
+   "test": "E",
+   "k": 2,
+   "train": [
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "E_FH",
+   "test": "E",
+   "k": 2,
+   "train": [
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "E_GH",
+   "test": "E",
+   "k": 2,
+   "train": [
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "E_ABCD",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "D"
+   ]
+  },
+  {
+   "subset_id": "E_ABCF",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "E_ABCG",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "E_ABCH",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "E_ABDF",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "D",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "E_ABDG",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "D",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "E_ABDH",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "D",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "E_ABFG",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "E_ABFH",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "E_ABGH",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "E_ACDF",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "D",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "E_ACDG",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "D",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "E_ACDH",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "D",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "E_ACFG",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "E_ACFH",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "E_ACGH",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "E_ADFG",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "A",
+    "D",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "E_ADFH",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "A",
+    "D",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "E_ADGH",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "A",
+    "D",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "E_AFGH",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "A",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "E_BCDF",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "D",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "E_BCDG",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "D",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "E_BCDH",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "D",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "E_BCFG",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "E_BCFH",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "E_BCGH",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "E_BDFG",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "B",
+    "D",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "E_BDFH",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "B",
+    "D",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "E_BDGH",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "B",
+    "D",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "E_BFGH",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "B",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "E_CDFG",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "C",
+    "D",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "E_CDFH",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "C",
+    "D",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "E_CDGH",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "C",
+    "D",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "E_CFGH",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "C",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "E_DFGH",
+   "test": "E",
+   "k": 4,
+   "train": [
+    "D",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "E_ABCDFG",
+   "test": "E",
+   "k": 6,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "E_ABCDFH",
+   "test": "E",
+   "k": 6,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "E_ABCDGH",
+   "test": "E",
+   "k": 6,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "E_ABCFGH",
+   "test": "E",
+   "k": 6,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "E_ABDFGH",
+   "test": "E",
+   "k": 6,
+   "train": [
+    "A",
+    "B",
+    "D",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "E_ACDFGH",
+   "test": "E",
+   "k": 6,
+   "train": [
+    "A",
+    "C",
+    "D",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "E_BCDFGH",
+   "test": "E",
+   "k": 6,
+   "train": [
+    "B",
+    "C",
+    "D",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "E_ABCDFGH",
+   "test": "E",
+   "k": 7,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "F",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "F_A",
+   "test": "F",
+   "k": 1,
+   "train": [
+    "A"
+   ]
+  },
+  {
+   "subset_id": "F_B",
+   "test": "F",
+   "k": 1,
+   "train": [
+    "B"
+   ]
+  },
+  {
+   "subset_id": "F_C",
+   "test": "F",
+   "k": 1,
+   "train": [
+    "C"
+   ]
+  },
+  {
+   "subset_id": "F_D",
+   "test": "F",
+   "k": 1,
+   "train": [
+    "D"
+   ]
+  },
+  {
+   "subset_id": "F_E",
+   "test": "F",
+   "k": 1,
+   "train": [
+    "E"
+   ]
+  },
+  {
+   "subset_id": "F_G",
+   "test": "F",
+   "k": 1,
+   "train": [
+    "G"
+   ]
+  },
+  {
+   "subset_id": "F_H",
+   "test": "F",
+   "k": 1,
+   "train": [
+    "H"
+   ]
+  },
+  {
+   "subset_id": "F_AB",
+   "test": "F",
+   "k": 2,
+   "train": [
+    "A",
+    "B"
+   ]
+  },
+  {
+   "subset_id": "F_AC",
+   "test": "F",
+   "k": 2,
+   "train": [
+    "A",
+    "C"
+   ]
+  },
+  {
+   "subset_id": "F_AD",
+   "test": "F",
+   "k": 2,
+   "train": [
+    "A",
+    "D"
+   ]
+  },
+  {
+   "subset_id": "F_AE",
+   "test": "F",
+   "k": 2,
+   "train": [
+    "A",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "F_AG",
+   "test": "F",
+   "k": 2,
+   "train": [
+    "A",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "F_AH",
+   "test": "F",
+   "k": 2,
+   "train": [
+    "A",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "F_BC",
+   "test": "F",
+   "k": 2,
+   "train": [
+    "B",
+    "C"
+   ]
+  },
+  {
+   "subset_id": "F_BD",
+   "test": "F",
+   "k": 2,
+   "train": [
+    "B",
+    "D"
+   ]
+  },
+  {
+   "subset_id": "F_BE",
+   "test": "F",
+   "k": 2,
+   "train": [
+    "B",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "F_BG",
+   "test": "F",
+   "k": 2,
+   "train": [
+    "B",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "F_BH",
+   "test": "F",
+   "k": 2,
+   "train": [
+    "B",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "F_CD",
+   "test": "F",
+   "k": 2,
+   "train": [
+    "C",
+    "D"
+   ]
+  },
+  {
+   "subset_id": "F_CE",
+   "test": "F",
+   "k": 2,
+   "train": [
+    "C",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "F_CG",
+   "test": "F",
+   "k": 2,
+   "train": [
+    "C",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "F_CH",
+   "test": "F",
+   "k": 2,
+   "train": [
+    "C",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "F_DE",
+   "test": "F",
+   "k": 2,
+   "train": [
+    "D",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "F_DG",
+   "test": "F",
+   "k": 2,
+   "train": [
+    "D",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "F_DH",
+   "test": "F",
+   "k": 2,
+   "train": [
+    "D",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "F_EG",
+   "test": "F",
+   "k": 2,
+   "train": [
+    "E",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "F_EH",
+   "test": "F",
+   "k": 2,
+   "train": [
+    "E",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "F_GH",
+   "test": "F",
+   "k": 2,
+   "train": [
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "F_ABCD",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "D"
+   ]
+  },
+  {
+   "subset_id": "F_ABCE",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "F_ABCG",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "F_ABCH",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "F_ABDE",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "D",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "F_ABDG",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "D",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "F_ABDH",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "D",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "F_ABEG",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "E",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "F_ABEH",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "E",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "F_ABGH",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "F_ACDE",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "D",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "F_ACDG",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "D",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "F_ACDH",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "D",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "F_ACEG",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "E",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "F_ACEH",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "E",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "F_ACGH",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "F_ADEG",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "A",
+    "D",
+    "E",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "F_ADEH",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "A",
+    "D",
+    "E",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "F_ADGH",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "A",
+    "D",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "F_AEGH",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "A",
+    "E",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "F_BCDE",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "D",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "F_BCDG",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "D",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "F_BCDH",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "D",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "F_BCEG",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "E",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "F_BCEH",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "E",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "F_BCGH",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "F_BDEG",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "B",
+    "D",
+    "E",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "F_BDEH",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "B",
+    "D",
+    "E",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "F_BDGH",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "B",
+    "D",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "F_BEGH",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "B",
+    "E",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "F_CDEG",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "C",
+    "D",
+    "E",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "F_CDEH",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "C",
+    "D",
+    "E",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "F_CDGH",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "C",
+    "D",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "F_CEGH",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "C",
+    "E",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "F_DEGH",
+   "test": "F",
+   "k": 4,
+   "train": [
+    "D",
+    "E",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "F_ABCDEG",
+   "test": "F",
+   "k": 6,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "F_ABCDEH",
+   "test": "F",
+   "k": 6,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "F_ABCDGH",
+   "test": "F",
+   "k": 6,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "F_ABCEGH",
+   "test": "F",
+   "k": 6,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "E",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "F_ABDEGH",
+   "test": "F",
+   "k": 6,
+   "train": [
+    "A",
+    "B",
+    "D",
+    "E",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "F_ACDEGH",
+   "test": "F",
+   "k": 6,
+   "train": [
+    "A",
+    "C",
+    "D",
+    "E",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "F_BCDEGH",
+   "test": "F",
+   "k": 6,
+   "train": [
+    "B",
+    "C",
+    "D",
+    "E",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "F_ABCDEGH",
+   "test": "F",
+   "k": 7,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "G",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "G_A",
+   "test": "G",
+   "k": 1,
+   "train": [
+    "A"
+   ]
+  },
+  {
+   "subset_id": "G_B",
+   "test": "G",
+   "k": 1,
+   "train": [
+    "B"
+   ]
+  },
+  {
+   "subset_id": "G_C",
+   "test": "G",
+   "k": 1,
+   "train": [
+    "C"
+   ]
+  },
+  {
+   "subset_id": "G_D",
+   "test": "G",
+   "k": 1,
+   "train": [
+    "D"
+   ]
+  },
+  {
+   "subset_id": "G_E",
+   "test": "G",
+   "k": 1,
+   "train": [
+    "E"
+   ]
+  },
+  {
+   "subset_id": "G_F",
+   "test": "G",
+   "k": 1,
+   "train": [
+    "F"
+   ]
+  },
+  {
+   "subset_id": "G_H",
+   "test": "G",
+   "k": 1,
+   "train": [
+    "H"
+   ]
+  },
+  {
+   "subset_id": "G_AB",
+   "test": "G",
+   "k": 2,
+   "train": [
+    "A",
+    "B"
+   ]
+  },
+  {
+   "subset_id": "G_AC",
+   "test": "G",
+   "k": 2,
+   "train": [
+    "A",
+    "C"
+   ]
+  },
+  {
+   "subset_id": "G_AD",
+   "test": "G",
+   "k": 2,
+   "train": [
+    "A",
+    "D"
+   ]
+  },
+  {
+   "subset_id": "G_AE",
+   "test": "G",
+   "k": 2,
+   "train": [
+    "A",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "G_AF",
+   "test": "G",
+   "k": 2,
+   "train": [
+    "A",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "G_AH",
+   "test": "G",
+   "k": 2,
+   "train": [
+    "A",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "G_BC",
+   "test": "G",
+   "k": 2,
+   "train": [
+    "B",
+    "C"
+   ]
+  },
+  {
+   "subset_id": "G_BD",
+   "test": "G",
+   "k": 2,
+   "train": [
+    "B",
+    "D"
+   ]
+  },
+  {
+   "subset_id": "G_BE",
+   "test": "G",
+   "k": 2,
+   "train": [
+    "B",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "G_BF",
+   "test": "G",
+   "k": 2,
+   "train": [
+    "B",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "G_BH",
+   "test": "G",
+   "k": 2,
+   "train": [
+    "B",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "G_CD",
+   "test": "G",
+   "k": 2,
+   "train": [
+    "C",
+    "D"
+   ]
+  },
+  {
+   "subset_id": "G_CE",
+   "test": "G",
+   "k": 2,
+   "train": [
+    "C",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "G_CF",
+   "test": "G",
+   "k": 2,
+   "train": [
+    "C",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "G_CH",
+   "test": "G",
+   "k": 2,
+   "train": [
+    "C",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "G_DE",
+   "test": "G",
+   "k": 2,
+   "train": [
+    "D",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "G_DF",
+   "test": "G",
+   "k": 2,
+   "train": [
+    "D",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "G_DH",
+   "test": "G",
+   "k": 2,
+   "train": [
+    "D",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "G_EF",
+   "test": "G",
+   "k": 2,
+   "train": [
+    "E",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "G_EH",
+   "test": "G",
+   "k": 2,
+   "train": [
+    "E",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "G_FH",
+   "test": "G",
+   "k": 2,
+   "train": [
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "G_ABCD",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "D"
+   ]
+  },
+  {
+   "subset_id": "G_ABCE",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "G_ABCF",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "G_ABCH",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "G_ABDE",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "D",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "G_ABDF",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "D",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "G_ABDH",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "D",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "G_ABEF",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "E",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "G_ABEH",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "E",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "G_ABFH",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "G_ACDE",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "D",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "G_ACDF",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "D",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "G_ACDH",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "D",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "G_ACEF",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "E",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "G_ACEH",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "E",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "G_ACFH",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "G_ADEF",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "A",
+    "D",
+    "E",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "G_ADEH",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "A",
+    "D",
+    "E",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "G_ADFH",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "A",
+    "D",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "G_AEFH",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "A",
+    "E",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "G_BCDE",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "D",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "G_BCDF",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "D",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "G_BCDH",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "D",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "G_BCEF",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "E",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "G_BCEH",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "E",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "G_BCFH",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "G_BDEF",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "B",
+    "D",
+    "E",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "G_BDEH",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "B",
+    "D",
+    "E",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "G_BDFH",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "B",
+    "D",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "G_BEFH",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "B",
+    "E",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "G_CDEF",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "C",
+    "D",
+    "E",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "G_CDEH",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "C",
+    "D",
+    "E",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "G_CDFH",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "C",
+    "D",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "G_CEFH",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "C",
+    "E",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "G_DEFH",
+   "test": "G",
+   "k": 4,
+   "train": [
+    "D",
+    "E",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "G_ABCDEF",
+   "test": "G",
+   "k": 6,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "G_ABCDEH",
+   "test": "G",
+   "k": 6,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "G_ABCDFH",
+   "test": "G",
+   "k": 6,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "G_ABCEFH",
+   "test": "G",
+   "k": 6,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "E",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "G_ABDEFH",
+   "test": "G",
+   "k": 6,
+   "train": [
+    "A",
+    "B",
+    "D",
+    "E",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "G_ACDEFH",
+   "test": "G",
+   "k": 6,
+   "train": [
+    "A",
+    "C",
+    "D",
+    "E",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "G_BCDEFH",
+   "test": "G",
+   "k": 6,
+   "train": [
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "G_ABCDEFH",
+   "test": "G",
+   "k": 7,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "H"
+   ]
+  },
+  {
+   "subset_id": "H_A",
+   "test": "H",
+   "k": 1,
+   "train": [
+    "A"
+   ]
+  },
+  {
+   "subset_id": "H_B",
+   "test": "H",
+   "k": 1,
+   "train": [
+    "B"
+   ]
+  },
+  {
+   "subset_id": "H_C",
+   "test": "H",
+   "k": 1,
+   "train": [
+    "C"
+   ]
+  },
+  {
+   "subset_id": "H_D",
+   "test": "H",
+   "k": 1,
+   "train": [
+    "D"
+   ]
+  },
+  {
+   "subset_id": "H_E",
+   "test": "H",
+   "k": 1,
+   "train": [
+    "E"
+   ]
+  },
+  {
+   "subset_id": "H_F",
+   "test": "H",
+   "k": 1,
+   "train": [
+    "F"
+   ]
+  },
+  {
+   "subset_id": "H_G",
+   "test": "H",
+   "k": 1,
+   "train": [
+    "G"
+   ]
+  },
+  {
+   "subset_id": "H_AB",
+   "test": "H",
+   "k": 2,
+   "train": [
+    "A",
+    "B"
+   ]
+  },
+  {
+   "subset_id": "H_AC",
+   "test": "H",
+   "k": 2,
+   "train": [
+    "A",
+    "C"
+   ]
+  },
+  {
+   "subset_id": "H_AD",
+   "test": "H",
+   "k": 2,
+   "train": [
+    "A",
+    "D"
+   ]
+  },
+  {
+   "subset_id": "H_AE",
+   "test": "H",
+   "k": 2,
+   "train": [
+    "A",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "H_AF",
+   "test": "H",
+   "k": 2,
+   "train": [
+    "A",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "H_AG",
+   "test": "H",
+   "k": 2,
+   "train": [
+    "A",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "H_BC",
+   "test": "H",
+   "k": 2,
+   "train": [
+    "B",
+    "C"
+   ]
+  },
+  {
+   "subset_id": "H_BD",
+   "test": "H",
+   "k": 2,
+   "train": [
+    "B",
+    "D"
+   ]
+  },
+  {
+   "subset_id": "H_BE",
+   "test": "H",
+   "k": 2,
+   "train": [
+    "B",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "H_BF",
+   "test": "H",
+   "k": 2,
+   "train": [
+    "B",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "H_BG",
+   "test": "H",
+   "k": 2,
+   "train": [
+    "B",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "H_CD",
+   "test": "H",
+   "k": 2,
+   "train": [
+    "C",
+    "D"
+   ]
+  },
+  {
+   "subset_id": "H_CE",
+   "test": "H",
+   "k": 2,
+   "train": [
+    "C",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "H_CF",
+   "test": "H",
+   "k": 2,
+   "train": [
+    "C",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "H_CG",
+   "test": "H",
+   "k": 2,
+   "train": [
+    "C",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "H_DE",
+   "test": "H",
+   "k": 2,
+   "train": [
+    "D",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "H_DF",
+   "test": "H",
+   "k": 2,
+   "train": [
+    "D",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "H_DG",
+   "test": "H",
+   "k": 2,
+   "train": [
+    "D",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "H_EF",
+   "test": "H",
+   "k": 2,
+   "train": [
+    "E",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "H_EG",
+   "test": "H",
+   "k": 2,
+   "train": [
+    "E",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "H_FG",
+   "test": "H",
+   "k": 2,
+   "train": [
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "H_ABCD",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "D"
+   ]
+  },
+  {
+   "subset_id": "H_ABCE",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "H_ABCF",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "H_ABCG",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "H_ABDE",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "D",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "H_ABDF",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "D",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "H_ABDG",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "D",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "H_ABEF",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "E",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "H_ABEG",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "E",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "H_ABFG",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "A",
+    "B",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "H_ACDE",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "D",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "H_ACDF",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "D",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "H_ACDG",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "D",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "H_ACEF",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "E",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "H_ACEG",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "E",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "H_ACFG",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "A",
+    "C",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "H_ADEF",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "A",
+    "D",
+    "E",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "H_ADEG",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "A",
+    "D",
+    "E",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "H_ADFG",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "A",
+    "D",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "H_AEFG",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "A",
+    "E",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "H_BCDE",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "D",
+    "E"
+   ]
+  },
+  {
+   "subset_id": "H_BCDF",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "D",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "H_BCDG",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "D",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "H_BCEF",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "E",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "H_BCEG",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "E",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "H_BCFG",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "B",
+    "C",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "H_BDEF",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "B",
+    "D",
+    "E",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "H_BDEG",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "B",
+    "D",
+    "E",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "H_BDFG",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "B",
+    "D",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "H_BEFG",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "B",
+    "E",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "H_CDEF",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "C",
+    "D",
+    "E",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "H_CDEG",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "C",
+    "D",
+    "E",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "H_CDFG",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "C",
+    "D",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "H_CEFG",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "C",
+    "E",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "H_DEFG",
+   "test": "H",
+   "k": 4,
+   "train": [
+    "D",
+    "E",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "H_ABCDEF",
+   "test": "H",
+   "k": 6,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F"
+   ]
+  },
+  {
+   "subset_id": "H_ABCDEG",
+   "test": "H",
+   "k": 6,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "H_ABCDFG",
+   "test": "H",
+   "k": 6,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "H_ABCEFG",
+   "test": "H",
+   "k": 6,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "E",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "H_ABDEFG",
+   "test": "H",
+   "k": 6,
+   "train": [
+    "A",
+    "B",
+    "D",
+    "E",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "H_ACDEFG",
+   "test": "H",
+   "k": 6,
+   "train": [
+    "A",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "H_BCDEFG",
+   "test": "H",
+   "k": 6,
+   "train": [
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G"
+   ]
+  },
+  {
+   "subset_id": "H_ABCDEFG",
+   "test": "H",
+   "k": 7,
+   "train": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G"
+   ]
+  }
+ ],
+ "triplex": {
+  "test_patients": [
+   "B",
+   "C",
+   "A",
+   "E"
+  ],
+  "ks": [
+   2,
+   4
+  ],
+  "per_k": 2,
+  "k7_tag": "triplex_lopo_833_e20",
+  "runs": [
+   {
+    "subset_id": "B_AG",
+    "test": "B",
+    "k": 2,
+    "train": [
+     "A",
+     "G"
+    ],
+    "tag": "triplex_tsize_B_AG"
+   },
+   {
+    "subset_id": "B_DG",
+    "test": "B",
+    "k": 2,
+    "train": [
+     "D",
+     "G"
+    ],
+    "tag": "triplex_tsize_B_DG"
+   },
+   {
+    "subset_id": "B_ACFH",
+    "test": "B",
+    "k": 4,
+    "train": [
+     "A",
+     "C",
+     "F",
+     "H"
+    ],
+    "tag": "triplex_tsize_B_ACFH"
+   },
+   {
+    "subset_id": "B_CEFG",
+    "test": "B",
+    "k": 4,
+    "train": [
+     "C",
+     "E",
+     "F",
+     "G"
+    ],
+    "tag": "triplex_tsize_B_CEFG"
+   },
+   {
+    "subset_id": "C_DH",
+    "test": "C",
+    "k": 2,
+    "train": [
+     "D",
+     "H"
+    ],
+    "tag": "triplex_tsize_C_DH"
+   },
+   {
+    "subset_id": "C_FH",
+    "test": "C",
+    "k": 2,
+    "train": [
+     "F",
+     "H"
+    ],
+    "tag": "triplex_tsize_C_FH"
+   },
+   {
+    "subset_id": "C_BDEH",
+    "test": "C",
+    "k": 4,
+    "train": [
+     "B",
+     "D",
+     "E",
+     "H"
+    ],
+    "tag": "triplex_tsize_C_BDEH"
+   },
+   {
+    "subset_id": "C_BDFH",
+    "test": "C",
+    "k": 4,
+    "train": [
+     "B",
+     "D",
+     "F",
+     "H"
+    ],
+    "tag": "triplex_tsize_C_BDFH"
+   },
+   {
+    "subset_id": "A_BD",
+    "test": "A",
+    "k": 2,
+    "train": [
+     "B",
+     "D"
+    ],
+    "tag": "triplex_tsize_A_BD"
+   },
+   {
+    "subset_id": "A_DG",
+    "test": "A",
+    "k": 2,
+    "train": [
+     "D",
+     "G"
+    ],
+    "tag": "triplex_tsize_A_DG"
+   },
+   {
+    "subset_id": "A_BDGH",
+    "test": "A",
+    "k": 4,
+    "train": [
+     "B",
+     "D",
+     "G",
+     "H"
+    ],
+    "tag": "triplex_tsize_A_BDGH"
+   },
+   {
+    "subset_id": "A_CDGH",
+    "test": "A",
+    "k": 4,
+    "train": [
+     "C",
+     "D",
+     "G",
+     "H"
+    ],
+    "tag": "triplex_tsize_A_CDGH"
+   },
+   {
+    "subset_id": "E_AH",
+    "test": "E",
+    "k": 2,
+    "train": [
+     "A",
+     "H"
+    ],
+    "tag": "triplex_tsize_E_AH"
+   },
+   {
+    "subset_id": "E_DF",
+    "test": "E",
+    "k": 2,
+    "train": [
+     "D",
+     "F"
+    ],
+    "tag": "triplex_tsize_E_DF"
+   },
+   {
+    "subset_id": "E_ABCD",
+    "test": "E",
+    "k": 4,
+    "train": [
+     "A",
+     "B",
+     "C",
+     "D"
+    ],
+    "tag": "triplex_tsize_E_ABCD"
+   },
+   {
+    "subset_id": "E_ACFG",
+    "test": "E",
+    "k": 4,
+    "train": [
+     "A",
+     "C",
+     "F",
+     "G"
+    ],
+    "tag": "triplex_tsize_E_ACFG"
+   }
+  ]
+ }
+}

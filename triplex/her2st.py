@@ -142,6 +142,31 @@ def all_sections(index_df):
     return sorted(index_df.section.unique())
 
 
+def split_sections(index_df, patient, train_patients=None):
+    """(train_sections, test_sections) for one fold. train_patients=None is the
+    standard LOPO split (every section of the other 7 patients); a list restricts
+    training to those patients' sections (training-size experiment). The held-out
+    patient may never be in training."""
+    test_sections = sections_for_patient(index_df, patient)
+    if not test_sections:
+        raise ValueError(f"no sections for patient {patient!r}")
+    if train_patients is None:
+        train_sections = [s for s in all_sections(index_df) if s not in test_sections]
+    else:
+        train_patients = list(train_patients)
+        if patient in train_patients:
+            raise ValueError(f"held-out patient {patient} is in train_patients {train_patients}")
+        if not train_patients or len(set(train_patients)) != len(train_patients):
+            raise ValueError(f"bad train_patients {train_patients}")
+        known = set(index_df.patient.unique())
+        if set(train_patients) - known:
+            raise ValueError(f"unknown patients {sorted(set(train_patients) - known)}")
+        train_sections = sorted(index_df.loc[index_df.patient.isin(train_patients),
+                                             "section"].unique())
+    assert not set(train_sections) & set(test_sections)
+    return train_sections, test_sections
+
+
 if __name__ == "__main__":
     # convenience: build the spot index from index.json
     build_spot_index()
