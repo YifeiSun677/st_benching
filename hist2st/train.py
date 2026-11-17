@@ -89,6 +89,12 @@ def run_fold(args, fold_i, fold_name, tr, te, dev="cuda"):
                     heads=args.heads, channel=args.channel, dropout=args.dropout,
                     zinb=args.zinb, nb=False, bake=args.bake, lamb=args.lamb,
                     policy=args.policy).to(dev)
+    if args.no_pos:
+        # ablation, NOT upstream: zero and freeze the x/y position embeddings so the model
+        # cannot key on grid position (useless across patients under LOPO)
+        for e in (model.x_embed, model.y_embed):
+            torch.nn.init.zeros_(e.weight)
+            e.weight.requires_grad_(False)
     # training_step logs 'mse_loss', 'bake_loss', 'zinb_loss' through self.log: collect them,
     # because the total loss is dominated by the ZINB term and says little about the MSE head.
     comp = {}
@@ -119,13 +125,20 @@ def run_fold(args, fold_i, fold_name, tr, te, dev="cuda"):
         if ep % args.log_every == 0 or ep == 1:
             msg = " ".join(f"{k.replace('_loss', '')} {row[k]:.4f}"
                            for k in ("mse_loss", "zinb_loss", "bake_loss") if k in row)
+            el = time.time() - t0
             print(f"  [{fold_name}] epoch {ep}/{args.epochs} loss {curve[-1]:.4f} | {msg} "
-                  f"(mean-pred MSE {base_mse:.4f}) ({(time.time()-t0)/ep:.1f}s/ep)", flush=True)
+                  f"(mean-pred MSE {base_mse:.4f}) ({el/ep:.1f}s/ep, elapsed {el/60:.1f} min, "
+                  f"fold ETA {el/ep*(args.epochs-ep)/60:.1f} min)", flush=True)
             if args.check_sections > 0:
                 row["pcc_eval"], row["sdr_eval"] = in_train_check(model, ds_tr, args.check_sections, dev, False)
                 row["pcc_bnbatch"], row["sdr_bnbatch"] = in_train_check(model, ds_tr, args.check_sections, dev, True)
                 print(f"    in-train PCC eval-mode {row['pcc_eval']:+.4f} (sd_ratio {row['sdr_eval']:.3f}) | "
                       f"BN batch-stats {row['pcc_bnbatch']:+.4f} (sd_ratio {row['sdr_bnbatch']:.3f})", flush=True)
+            if args.monitor_test:
+                # diagnostic only: never used to pick an epoch; scoring stays last-epoch
+                row["pcc_test"], row["sdr_test"] = in_train_check(model, ds_te, len(te), dev, False)
+                print(f"    held-out PCC {row['pcc_test']:+.4f} (sd_ratio {row['sdr_test']:.3f}) "
+                      f"[monitor only]", flush=True)
         rows.append(row)
     train_sec = time.time() - t0
     keys = sorted({k for r in rows for k in r}, key=lambda k: (k != "epoch", k))
@@ -186,6 +199,10 @@ def main():
                     help="divide pixels by 255 (original repo does not; off by default)")
     ap.add_argument("--save_ckpt", action="store_true")
     ap.add_argument("--log_every", type=int, default=10)
+    ap.add_argument("--no_pos", action="store_true",
+                    help="ablation (not upstream): zero and freeze the x/y position embeddings")
+    ap.add_argument("--monitor_test", action="store_true",
+                    help="print held-out PCC at each log step (diagnostic only, no epoch selection)")
     ap.add_argument("--check_sections", type=int, default=3,
                     help="training sections used for the in-train PCC check at each log step (0 = off)")
     args = ap.parse_args()
