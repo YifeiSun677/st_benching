@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Stage 5 driver -- Hist2ST (hist2st_lopo_833, 350 epochs; --run for the ep1000 sensitivity).
+"""Stage 5 driver -- Hist2ST (hist2st_lopo_833_cp10k, 350 epochs; --run for older runs).
 
 Model rebuilt with the fold's own run.json "config"; weights = <fold>/model.pt.
 
@@ -13,8 +13,9 @@ Per fold P:
             graph = calcADJ on x_eq / y_eq (continuous 200-um units) with the SAME k and
             Grid threshold (<= 2.0 units) -- on Visium the 4 nearest neighbours sit ~0.5
             units away, so the graph keeps its degree but spans a smaller physical radius
-  truth     the port's load_section rule: panel counts, lib over the panel, x MEDIAN lib of
-            the section, log10(+1)  (HIST2ST_NORM must be the value the run used: median)
+  truth     the port's load_section rule: panel counts, lib over the panel, x 1e4 (cp10k) or
+            x the section's median lib (median), log10(+1).  HIST2ST_NORM must equal the run's
+            norm; run_norm() reads it from run.json and every driver stops on a mismatch
   OOM on a whole Visium section -> the script stops and says so (then a windowed variant)
 
 usage: cd /workspace/st_benching && python external/run_hist2st.py --folds B
@@ -45,11 +46,26 @@ from HIST2ST import Hist2ST  # noqa: E402
 Image.MAX_IMAGE_PIXELS = None
 
 
+def run_norm(rdir):
+    """Target normalisation a fold was trained with. run.json has a 'norm' key since the cp10k
+    re-run; older runs have none and were trained with the then-default 'median'."""
+    return json.load(open(os.path.join(rdir, "run.json"))).get("norm", "median")
+
+
+def check_norm(rdir):
+    n = run_norm(rdir)
+    if n != HC.NORM:
+        raise SystemExit(f"{rdir} was trained with norm={n} but HIST2ST_NORM={HC.NORM}: "
+                         f"run with HIST2ST_NORM={n}")
+
+
 def target(ori):
-    """load_section's exp: lib over the panel, x median lib, log10(+1)."""
+    """load_section's exp: lib over the panel, x 1e4 or x median lib (HC.NORM), log10(+1)."""
     ori = np.asarray(ori, np.float64)
     lib = ori.sum(1)
     lib[lib == 0] = 1.0
+    if HC.NORM not in ("median", "cp10k"):
+        raise ValueError(HC.NORM)
     scale = np.median(lib) if HC.NORM == "median" else 1e4
     return np.log10(ori / lib[:, None] * scale + 1.0).astype(np.float32)
 
@@ -106,7 +122,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--folds", default="all")
     ap.add_argument("--sections", nargs="*", default=K.VISIUM_SECTIONS)
-    ap.add_argument("--run", default="/workspace/runs/hist2st_lopo_833")
+    ap.add_argument("--run", default="/workspace/runs/hist2st_lopo_833_cp10k")
     ap.add_argument("--out", default="/workspace/runs/ext_hist2st")
     ap.add_argument("--skip_roundtrip", action="store_true")
     ap.add_argument("--rt_tol", type=float, default=1e-4)
@@ -114,8 +130,9 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     panel = load_panel()
     assert panel == K.load_panel()
+    check_norm(os.path.join(a.run, "fold01_B"))
     cfg = json.load(open(os.path.join(a.run, "fold01_B", "run.json")))["config"]
-    print(f"config: {cfg}\nHIST2ST_NORM={HC.NORM}", flush=True)
+    print(f"run: {a.run}\nconfig: {cfg}\nHIST2ST_NORM={HC.NORM}", flush=True)
 
     vis = {}
     for sec in a.sections:
@@ -130,6 +147,7 @@ def main():
         P, k = fd["patient"], fd["fold"]
         t0 = time.time()
         rdir = os.path.join(a.run, f"fold{k:02d}_{P}")
+        check_norm(rdir)
         cfg_k = json.load(open(os.path.join(rdir, "run.json")))["config"]
         model = build_model(cfg_k, len(panel), device)
         model.load_state_dict(torch.load(os.path.join(rdir, "model.pt"), map_location=device,

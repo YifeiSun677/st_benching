@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""TCGA stage B -- Hist2ST (hist2st_lopo_833) on TCGA-BRCA whole-slide windows.
+"""TCGA stage B -- Hist2ST (hist2st_lopo_833_cp10k) on TCGA-BRCA whole-slide windows.
 
 Same model, crops, graph and output space as run_hist2st_he.py; model rebuilt from each fold's run.json
 "config", weights <fold>/model.pt:
@@ -11,8 +11,9 @@ Same model, crops, graph and output space as run_hist2st_he.py; model rebuilt fr
   graph      calcADJ on the block's positions with the run's k and Grid pruning (translation-invariant, so
              identical to calcADJ on the window coords within a block); spots with no neighbour inside the
              pruning radius get a self-loop, exactly as run_hist2st_he.py (TCGA has 1-spot windows)
-  output     raw = log10(x / lib * median(lib) + 1)  (the port's target space; the per-section median scale
-             multiplies every gene of a spot equally and cancels in the panel-CPM pseudo-bulk)
+  output     raw = the run's target space: log10(x / lib * 1e4 + 1) for cp10k, log10(x / lib * median(lib) + 1)
+             for median runs.  Either scale multiplies every gene of a spot equally and cancels in the
+             panel-CPM pseudo-bulk.  HIST2ST_NORM must equal the run's norm (checked)
              lin = max(10**raw - 1, 0)
   no truth   ST-cnts are never opened.
 
@@ -109,7 +110,7 @@ def main():
     ap.add_argument("--batch", nargs="*", type=int)
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--spots-for", nargs="*", default=None)
-    ap.add_argument("--run", default="/workspace/runs/hist2st_lopo_833")
+    ap.add_argument("--run", default="/workspace/runs/hist2st_lopo_833_cp10k")
     ap.add_argument("--out", default="/workspace/runs/tcga_hist2st")
     ap.add_argument("--he-check", default=None)
     ap.add_argument("--he-root", default="/workspace/runs/he_hist2st")
@@ -118,7 +119,7 @@ def main():
     dev = "cuda" if torch.cuda.is_available() else "cpu"
     panel = load_panel()
     assert panel == K.load_panel()
-    print(f"HIST2ST_NORM={HC.NORM}", flush=True)
+    print(f"run: {a.run}\nHIST2ST_NORM={HC.NORM}", flush=True)
 
     folds = K.lopo_folds()
     if a.folds != "all":
@@ -127,6 +128,7 @@ def main():
     for fd in folds:
         P, k = fd["patient"], fd["fold"]
         rdir = os.path.join(a.run, f"fold{k:02d}_{P}")
+        R.check_norm(rdir)
         cfg = json.load(open(os.path.join(rdir, "run.json")))["config"]
         model = R.build_model(cfg, len(panel), dev)
         model.load_state_dict(torch.load(os.path.join(rdir, "model.pt"), map_location=dev, weights_only=False),
@@ -136,7 +138,7 @@ def main():
                          extra=dict(ckpt=os.path.join(rdir, "model.pt"), config=cfg, norm=HC.NORM, cohort="tcga",
                                     positions="tcga_common.her2st_blocks (translate to 2,2; split to fit x 2-32, y 2-34)",
                                     graph="calcADJ on block positions, run's k and Grid prune; self-loop on isolated spots",
-                                    raw="log10(x/lib*median(lib)+1) over the panel", inverse="max(10**raw - 1, 0)",
+                                    raw=("log10(x/lib*1e4+1)" if HC.NORM == "cp10k" else "log10(x/lib*median(lib)+1)") + " over the panel", inverse="max(10**raw - 1, 0)",
                                     train=fd["train"]))
     print(f"loaded {len(models)} fold models on {dev}")
 

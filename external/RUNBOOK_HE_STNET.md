@@ -400,12 +400,13 @@ The model is rebuilt from each fold's `run.json`, with weights from `<fold>/mode
 - **Positions and graph:** He array `x, y`, which are 200-µm integers exactly as in her2st. The graph is
   `calcADJ` on array coordinates with the run's k and Grid pruning, the same as her2st. A local test gave a mean degree of 4.0.
   The Visium `x_eq` workaround is not needed.
-- **Truth:** median-library log10 (`HIST2ST_NORM=median`, which must match the run).
+- **Truth:** log10(CP10K+1) over the panel (`HIST2ST_NORM=cp10k`, the default since the cp10k re-run `hist2st_lopo_833_cp10k`).
+  The drivers read each fold's `norm` from `run.json` and stop if `HIST2ST_NORM` differs. Runs without a `norm` key are the old median-library runs.
 
 ## F.0 Preflight
 
 ```bash
-ls /workspace/runs/hist2st_lopo_833/fold01_B/ && echo "HIST2ST_NORM=${HIST2ST_NORM:-median (default)}"
+ls /workspace/runs/hist2st_lopo_833_cp10k/fold01_B/ && echo "HIST2ST_NORM=${HIST2ST_NORM:-cp10k (default)}"
 ```
 
 ```bash
@@ -434,8 +435,8 @@ The first lines must show graph mean degree ≈ 4 and a finite PCC. Then:
 rm -rf /workspace/runs/he_hist2st_smoke && python external/run_hist2st_he.py --out /workspace/runs/he_hist2st 2>&1 | tee /workspace/runs/he_hist2st/predict.log
 ```
 
-For the ep1000 sensitivity run, pass `--run /workspace/runs/<ep1000 run dir> --out /workspace/runs/he_hist2st_ep1000`
-here **and** in F.1. The scorer then shows it as a separate model, `hist2st_ep1000`.
+For an older median-library run (`hist2st_lopo_833`, ep1000), pass `--run /workspace/runs/<run dir> --out /workspace/runs/he_hist2st_<name>`
+here **and** in F.1, with `HIST2ST_NORM=median` in front of each command. The scorer then shows it as a separate model, `hist2st_<name>`.
 
 ---
 
@@ -532,5 +533,5 @@ This scores every `runs/he_*` directory into `results/he/`, with all eight model
 Each model is paired only with its **own** her2st held-out (its C.1/D.1-style step), so every delta stays within one model.
 
 **Target spaces differ by model:** ST-Net log((1+c)/(n+Z)), BLEEP CPM-log1p, HisToGene log10(CP10K+1),
-Path2Space median-lognorm, DeepPT log10(CP10K+1) over all genes, Hist2ST median-library log10,
+Path2Space median-lognorm, DeepPT log10(CP10K+1) over all genes, Hist2ST log10(CP10K+1) over the panel,
 TRIPLEX CPM-log1p, STFlow log1p(panel CP10K). PCC and the paired delta are compared across models; absolute SSE is not.

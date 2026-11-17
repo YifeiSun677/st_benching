@@ -229,7 +229,7 @@ Same sequence as ST-Net: `--he-check BC23287_C1` → smoke on the four B.2 secti
 | model | driver | raw → lin | notes |
 |---|---|---|---|
 | HisToGene | `run_histogene_tcga.py` | log10(CP10K+1) → `max(10**x−1,0)` | positions remapped (below) |
-| Hist2ST | `run_hist2st_tcga.py` | log10(x/lib·median+1) → `max(10**x−1,0)` | positions remapped; k capped at n−1 (upstream `calcADJ` raises IndexError on blocks with ≤ k spots); self-loop on isolated spots (He fix) |
+| Hist2ST | `run_hist2st_tcga.py` | log10(panel CP10K+1) → `max(10**x−1,0)` (median runs: log10(x/lib·median+1)) | positions remapped; k capped at n−1 (upstream `calcADJ` raises IndexError on blocks with ≤ k spots); self-loop on isolated spots (He fix) |
 | TRIPLEX | `run_triplex_tcga.py` | log1p(panel CPM) → `max(expm1,0)` | APEG grid scanned per fold as He; neighbours on the whole window; position + global branch per block |
 | STFlow | `run_stflow_tcga.py` | log1p(panel CP10K) → `max(expm1,0)` | one seeded `predict()` per block; row-index placeholder labels; `--placeholder-check` |
 | Path2Space | `run_path2space_tcga.py` | lognorm log1p → `max(expm1,0)` | Macenko in a bounded `spawn` pool (no tiles on disk); CPU-bound (~10-core quota on this pod) |

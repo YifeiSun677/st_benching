@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""He Stage 4 -- Hist2ST (hist2st_lopo_833; --run for the ep1000 sensitivity) on He et al. 2020.
+"""He Stage 4 -- Hist2ST (hist2st_lopo_833_cp10k; --run for older runs) on He et al. 2020.
 
 Same model, input and target as run_hist2st.py (the Visium driver); model rebuilt from each
 fold's own run.json "config", weights <fold>/model.pt.
@@ -12,8 +12,8 @@ fold's own run.json "config", weights <fold>/model.pt.
              Spots with NO neighbour inside the pruning radius get a self-loop (else 0/0 NaN that
              the transformer spreads to the whole section); counts are printed and stored in run.json
   rows       load_section order: spot ids shared by counts and spot file, sorted
-  truth      load_section rule: panel counts, lib over the panel, x MEDIAN lib of the section,
-             log10(+1)  (HIST2ST_NORM must be the value the run used: median)
+  truth      load_section rule: panel counts, lib over the panel, x 1e4 (cp10k) or x the section's
+             median lib (median), log10(+1).  HIST2ST_NORM must equal the run's norm (checked)
 
 The her2st held-out sections for the paired comparison come from run_hist2st.py (runbook F.1).
 
@@ -77,15 +77,16 @@ def main():
     ap.add_argument("--folds", default="all")
     ap.add_argument("--sections", nargs="*", default=None, help="default: every exported He section")
     ap.add_argument("--subtypes", nargs="*", default=None)
-    ap.add_argument("--run", default="/workspace/runs/hist2st_lopo_833")
+    ap.add_argument("--run", default="/workspace/runs/hist2st_lopo_833_cp10k")
     ap.add_argument("--out", default="/workspace/runs/he_hist2st")
     a = ap.parse_args()
     out_root = os.path.abspath(a.out)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     panel = load_panel()
     assert panel == K.load_panel()
+    R.check_norm(os.path.join(a.run, "fold01_B"))
     cfg = json.load(open(os.path.join(a.run, "fold01_B", "run.json")))["config"]
-    print(f"config: {cfg}\nHIST2ST_NORM={HC.NORM}", flush=True)
+    print(f"run: {a.run}\nconfig: {cfg}\nHIST2ST_NORM={HC.NORM}", flush=True)
 
     exported = {f.name[len("counts_"):-len(".npz")] for f in H.HE_CALIB.glob("counts_*.npz")}
     secs = a.sections or [s for s in H.he_sections(subtypes=a.subtypes) if s in exported]
@@ -107,6 +108,7 @@ def main():
         P, k = fd["patient"], fd["fold"]
         t0 = time.time()
         rdir = os.path.join(a.run, f"fold{k:02d}_{P}")
+        R.check_norm(rdir)
         cfg_k = json.load(open(os.path.join(rdir, "run.json")))["config"]
         assert (cfg_k["neighbor"], cfg_k["prune"]) == (cfg["neighbor"], cfg["prune"]), \
             f"fold {P} graph config differs from fold B -- rebuild graphs per fold"
