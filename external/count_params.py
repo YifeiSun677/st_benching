@@ -68,7 +68,7 @@ def main():
     ckpts = {
         "ST-Net":     [f"/workspace/ST-Net/output/densenet121_224/top_833/{P}_checkpoints/epoch_25.pt"],
         "HisToGene":  [f"/workspace/runs/histogene_lopo_833_ckpt/fold{k:02d}_{P}/last.ckpt"],
-        "Hist2ST":    [f"/workspace/runs/hist2st_lopo_833/fold{k:02d}_{P}/model.pt"],
+        "Hist2ST":    [f"/workspace/runs/hist2st_lopo_833_cp10k/fold{k:02d}_{P}/model.pt"],
         "BLEEP":      [f"/workspace/runs/bleep_lopo_e10/{P}/last.pt"],
         "DeepPT":     [f"/workspace/deeppt/results/deeppt_833_raw/ckpt/{P}_ae.pt",
                        f"/workspace/deeppt/results/deeppt_833_raw/ckpt/{P}_mlp.pt"],

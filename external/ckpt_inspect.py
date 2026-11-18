@@ -20,7 +20,7 @@ AUDIT = {   # model -> (glob of the 8 main-table weight files, expected epoch/bu
     "deeppt_ae":  ("/workspace/deeppt/results/deeppt_833_raw/ckpt/[A-H]_ae.pt", None),
     "deeppt_mlp": ("/workspace/deeppt/results/deeppt_833_raw/ckpt/[A-H]_mlp.pt", "early-stopped final"),
     "histogene":  ("/workspace/runs/histogene_lopo_833_ckpt/fold0[0-7]_[A-H]/last.ckpt", 100),
-    "hist2st":    ("/workspace/runs/hist2st_lopo_833/fold0[0-7]_[A-H]/model.pt", 350),
+    "hist2st":    ("/workspace/runs/hist2st_lopo_833_cp10k/fold0[0-7]_[A-H]/model.pt", 350),
     "path2space": ("/workspace/p2s_ckpt/path2space_lopo_833_ckpt/fold_[A-H]/ik_0.pt", 200),
     "triplex":    ("/workspace/triplex_ckpt/triplex_lopo_833_e20_ckpt/fold_[A-H]/final.pt", 20),
     "stflow":     ("/workspace/runs/stflow_lopo_833_normtarget_e20/fold0[0-7]_[A-H]/last.pth", 20),

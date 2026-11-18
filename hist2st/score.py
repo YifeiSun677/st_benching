@@ -32,7 +32,7 @@ def score_section(f):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--tag", default="hist2st_lopo_833")
+    ap.add_argument("--tag", default="hist2st_lopo_833_cp10k")
     args = ap.parse_args()
     root = C.OUT_ROOT / args.tag
 

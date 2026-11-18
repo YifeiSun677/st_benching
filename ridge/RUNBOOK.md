@@ -173,15 +173,33 @@ test skips on the pod; step 3a does the same check against the real index.)
 
 ### 2. Ridge (CPU, about 1 h for all 9 configs; resumable)
 
+Run it in tmux so it survives an SSH disconnect. If tmux is missing on the pod:
+
 ```bash
-cd /workspace/st_benching && nohup python -m ridge.run_tsize > /workspace/tsize_ridge.log 2>&1 &
+apt-get update && apt-get install -y tmux
 ```
+
+Start a detached session (the log is also kept on the volume; the shell stays
+open after the job ends so you can read the last lines):
+
 ```bash
-tail -f /workspace/tsize_ridge.log
+tmux new -d -s tsize_ridge 'cd /workspace/st_benching && python -u -m ridge.run_tsize 2>&1 | tee -a /workspace/tsize_ridge.log; exec bash'
 ```
+
+Watch it (detach again with Ctrl-b then d; the job keeps running):
+
 ```bash
-python -m ridge.run_tsize --status
+tmux attach -t tsize_ridge
 ```
+
+Progress without attaching:
+
+```bash
+cd /workspace/st_benching && python -m ridge.run_tsize --status
+```
+
+tmux sessions die if the pod restarts. In that case start the same session again;
+finished fits are skipped.
 
 Measured cost per fit: ~0.3 s at d = 1024 (UNI), ~1.3 s at d = 2048 (resnet50), ~1 s
 for cigar full (its global PCA is refitted per subset). Roughly: UNI 5 × ~4 min,
