@@ -186,6 +186,16 @@ open after the job ends so you can read the last lines):
 tmux new -d -s tsize_ridge 'cd /workspace/st_benching && python -u -m ridge.run_tsize 2>&1 | tee -a /workspace/tsize_ridge.log; exec bash'
 ```
 
+Do not run ridge at the same time as TRIPLEX training. The pod's CPU quota
+(`cat /sys/fs/cgroup/cpu.max`, about 10 cores) is far below `nproc` (128), so the
+two jobs fight over it: ridge slowed to about 2.5 s per fit and TRIPLEX to about
+50 s per epoch. Run them one after the other. With the pod to itself, ridge is
+faster as two jobs that split the configs between them (about 0.2–0.4 s per fit),
+each capped with `OMP_NUM_THREADS=5 OPENBLAS_NUM_THREADS=5 MKL_NUM_THREADS=5` and
+given its own `--configs` list. If you script a wait for another job, use
+`pgrep -f "[t]riplex.run_tsize"`; without the brackets, pgrep matches the waiting
+shell's own command line, so the wait never ends.
+
 Watch it (detach again with Ctrl-b then d; the job keeps running):
 
 ```bash
@@ -272,3 +282,90 @@ cd st_benching && python -m tsize.aggregate --ridge-dir ../results_4_models/ridg
 ```
 
 Expected: 5112 and 16.
+
+## External cohorts: ridge on He et al. and TCGA (Fig 6)
+
+The her2st reference baseline (UNI, local) applied to the two transfer cohorts. No new fitting choices:
+`ridge/external_fit.py` refits each of the 8 folds on its 7 training patients with the alpha that fold already
+chose in `ridge_uni_hest112_local_cp10k_panel_log10`, on target `cp10k_panel_ln` (the He / TCGA scale; ln vs
+log10 only rescales the output). Outputs use the same contracts as the deep models, so the existing scorers run
+unchanged. Model name: `ridge_uni`.
+
+### 0. Code and tests (pod, CPU)
+
+```bash
+cd /workspace/st_benching && git pull && python -m pytest ridge/tests/test_external_fit.py -q
+```
+
+Then check the refit against the stored her2st run (needs `/workspace/ridge_cache/features_uni_hest112.npz` and
+`/workspace/ridge_results/ridge_uni_hest112_local_cp10k_panel_log10`). Must print PASS:
+
+```bash
+python -m ridge.external_fit --verify
+```
+
+### 1. He et al. (CPU, minutes)
+
+The features are STFlow's cached He UNI embeddings. Count them (expect 68):
+
+```bash
+ls /workspace/ext/he/features/stflow/*.npz | wc -l
+```
+
+Only if fewer than 68 (GPU, once):
+
+```bash
+python external/run_stflow_he.py --features_only
+```
+
+Run and score. Score into its OWN folder: `score_he.py` overwrites its output files with only the models it is given.
+
+```bash
+python -m ridge.run_he --verify
+```
+```bash
+python external/score_he.py --models ridge_uni --out /workspace/results/he_ridge_uni
+```
+
+### 2. TCGA (GPU for UNI, then CPU; resumable)
+
+UNI was never cached for TCGA, so this embeds every window once (same crop as STFlow's TCGA run) and keeps the
+embeddings with `--cache` so a rerun skips the GPU. Run in tmux:
+
+```bash
+tmux new -d -s tcga_ridge 'cd /workspace/st_benching && python -u -m ridge.run_tcga --verify --cache /workspace/ext/tcga/features/uni_hest112 2>&1 | tee -a /workspace/tcga_ridge.log; exec bash'
+```
+
+Try `--limit 6` first if you want a quick timing. When it finishes, pseudo-bulk and score (both write per-model
+file names, so other models' files are untouched):
+
+```bash
+python tcga/pseudobulk.py --runs /workspace/runs/tcga_ridge_uni --out /workspace/results/tcga
+```
+```bash
+python tcga/score_tcga.py --pb /workspace/results/tcga/pseudobulk_ridge_uni.tsv.gz
+```
+
+The Mac has TCGA scores only for ST-Net, DeepPT and Hist2ST. If the other five models were never scored, the same
+two commands per model (`runs/tcga_<model>` -> `pseudobulk_<model>` -> `scores_<model>`):
+
+```bash
+for m in bleep histogene path2space stflow triplex; do python tcga/pseudobulk.py --runs /workspace/runs/tcga_$m --out /workspace/results/tcga && python tcga/score_tcga.py --pb /workspace/results/tcga/pseudobulk_$m.tsv.gz; done
+```
+
+### 3. Copy to the Mac (from `~/Documents/science`; use the pod's current IP and port)
+
+```bash
+scp -r -P <port> -i ~/.ssh/id_ed25519 'root@<ip>:/workspace/results/he_ridge_uni' ext_results/he_stnet/results/
+```
+```bash
+scp -r -P <port> -i ~/.ssh/id_ed25519 'root@<ip>:/workspace/results/tcga/*' tcga_results/tcga/
+```
+
+The Mac's `ext_results/he_stnet/results/he_cp10k/per_gene_pcc.csv.gz` has all 104 He sections only for ST-Net and
+Hist2ST (one section for the other six). Copy the full He result folder for all 8 models too -- the folder the
+`he_cp10k` scoring was written to on the pod (check with `ls -d /workspace/results/he*`):
+
+```bash
+scp -r -P <port> -i ~/.ssh/id_ed25519 'root@<ip>:/workspace/results/he_cp10k' ext_results/he_stnet/results/he_cp10k_full
+```
